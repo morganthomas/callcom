@@ -8,8 +8,8 @@ maintainer:    morgan.a.s.thomas@gmail.com
 
 library
   exposed-modules:
-    CallCom.Types.Asset
-    CallCom.Types.AssetClass
+    CallCom.Types.Commodity
+    CallCom.Types.CommodityType
     CallCom.Types.User
 
   build-depends:
