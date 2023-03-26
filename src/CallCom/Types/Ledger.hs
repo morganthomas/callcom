@@ -2,7 +2,8 @@
 
 
 module CallCom.Types.Ledger
-  ( Ledger (Ledger),
+  ( LedgerState (LedgerState),
+    Ledger (EmptyLedger, Ledger),
     BlockId (BlockId),
     Block (Block)
   ) where
@@ -26,7 +27,8 @@ data LedgerState =
 
 
 data Ledger =
-  Ledger
+    EmptyLedger
+  | Ledger
     { tip :: BlockId,
       blocks :: Map BlockId Block
     }
@@ -37,14 +39,14 @@ newtype BlockId =
   BlockId
     { unBlockId :: ByteString
     }
-  deriving Generic
+  deriving (Eq, Ord, Generic)
 
 
 data Block =
   Block
     { newUsers :: Map UserId User,
       created :: UTCTime,
-      parent :: BlockId,
+      parent :: Maybe BlockId,
       transactions :: Map TransactionId Transaction
     }
   deriving Generic

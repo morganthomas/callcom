@@ -10,6 +10,7 @@ library
   exposed-modules:
     CallCom.Types.Commodity
     CallCom.Types.CommodityType
+    CallCom.Types.HasLedgerStore
     CallCom.Types.Ledger
     CallCom.Types.Positions
     CallCom.Types.TokenBalance
