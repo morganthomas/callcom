@@ -8,21 +8,25 @@ module CallCom.Types.CommodityType
   ) where
 
 
+import CallCom.Types.User (UserId)
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
 
 data CommodityType =
   CommodityType
     { id :: CommodityTypeId,
-      name :: CommodityTypeName
+      name :: CommodityTypeName,
+      created :: UTCTime,
+      author :: UserId
     }
   deriving Generic
 
 
 newtype CommodityTypeId =
   CommodityTypeId
-    { unCommodityTypeId :: Int }
+    { unCommodityTypeId :: Text }
   deriving Generic
 
 

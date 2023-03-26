@@ -8,21 +8,25 @@ module CallCom.Types.User
   ) where
 
 
+import Data.Set (Set)
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
 
 data User =
   User
    { id :: UserId,
-     name :: UserName
+     name :: UserName,
+     referrers :: Set UserId,
+     created :: UTCTime
    }
   deriving Generic
 
 
 newtype UserId =
   UserId
-    { unUserId :: Int }
+    { unUserId :: Text }
   deriving Generic
 
 

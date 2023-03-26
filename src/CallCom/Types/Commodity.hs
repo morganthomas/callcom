@@ -10,6 +10,7 @@ module CallCom.Types.Commodity
 
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.User (UserId)
+import Data.Map (Map)
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -17,8 +18,8 @@ import GHC.Generics (Generic)
 
 data Commodity =
   Commodity
-    { types :: Set CommodityTypeId,
-      id :: CommodityId,
+    { id :: CommodityId,
+      types :: Set CommodityTypeId,
       description :: Maybe CommodityDescription,
       owner :: UserId
     }
@@ -27,7 +28,7 @@ data Commodity =
 
 newtype CommodityDescription =
   CommodityDescription
-    { unCommodityDescription :: Text }
+    { unCommodityDescription :: Map Text Text }
   deriving Generic
 
 
