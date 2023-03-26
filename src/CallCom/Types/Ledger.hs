@@ -13,6 +13,7 @@ import CallCom.Types.Transaction (TransactionId, Transaction)
 import CallCom.Types.User (UserId, User)
 import Data.Map (Map)
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
 
@@ -42,6 +43,8 @@ newtype BlockId =
 data Block =
   Block
     { newUsers :: Map UserId User,
+      created :: UTCTime,
+      parent :: BlockId,
       transactions :: Map TransactionId Transaction
     }
   deriving Generic
