@@ -9,6 +9,7 @@ module CallCom.Types.CommodityType
 
 
 import CallCom.Types.User (UserId)
+import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
@@ -26,7 +27,7 @@ data CommodityType =
 
 newtype CommodityTypeId =
   CommodityTypeId
-    { unCommodityTypeId :: Text }
+    { unCommodityTypeId :: ByteString }
   deriving Generic
 
 

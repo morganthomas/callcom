@@ -8,6 +8,7 @@ module CallCom.Types.User
   ) where
 
 
+import Data.ByteString (ByteString)
 import Data.Set (Set)
 import Data.Text (Text)
 import Data.Time (UTCTime)
@@ -26,7 +27,7 @@ data User =
 
 newtype UserId =
   UserId
-    { unUserId :: Text }
+    { unUserId :: ByteString }
   deriving Generic
 
 

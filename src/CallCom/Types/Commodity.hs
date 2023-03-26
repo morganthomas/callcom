@@ -10,6 +10,7 @@ module CallCom.Types.Commodity
 
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.User (UserId)
+import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Text (Text)
@@ -34,5 +35,5 @@ newtype CommodityDescription =
 
 newtype CommodityId =
   CommodityId
-    { unCommodityId :: Int }
+    { unCommodityId :: ByteString }
   deriving Generic

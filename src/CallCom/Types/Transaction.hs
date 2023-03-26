@@ -12,8 +12,8 @@ module CallCom.Types.Transaction
 
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.User (UserId)
+import Data.ByteString (ByteString)
 import Data.Map (Map)
-import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 
@@ -31,7 +31,7 @@ data Transaction =
 
 newtype TransactionId =
   TransactionId
-    { unTransactionId :: Text
+    { unTransactionId :: ByteString
     }
   deriving Generic
 

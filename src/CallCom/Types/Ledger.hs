@@ -11,8 +11,8 @@ module CallCom.Types.Ledger
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.Transaction (TransactionId, Transaction)
 import CallCom.Types.User (UserId, User)
+import Data.ByteString (ByteString)
 import Data.Map (Map)
-import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
@@ -35,7 +35,7 @@ data Ledger =
 
 newtype BlockId =
   BlockId
-    { unBlockId :: Text
+    { unBlockId :: ByteString
     }
   deriving Generic
 

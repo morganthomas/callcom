@@ -11,6 +11,7 @@ module CallCom.Types.TokenType
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.TokenBalance (TokenBalance)
 import CallCom.Types.User (UserId)
+import Data.ByteString (ByteString)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 
@@ -28,7 +29,7 @@ data TokenType =
 
 newtype TokenTypeId =
   TokenTypeId
-    { unTokenTypeId :: Int }
+    { unTokenTypeId :: ByteString }
   deriving Generic
 
 
