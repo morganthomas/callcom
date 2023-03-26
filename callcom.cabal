@@ -8,6 +8,9 @@ maintainer:    morgan.a.s.thomas@gmail.com
 
 library
   exposed-modules:
+    CallCom.Types.Asset
+    CallCom.Types.AssetClass
+    CallCom.Types.User
 
   build-depends:
     base >= 4.9 && < 5,
