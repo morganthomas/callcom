@@ -32,15 +32,16 @@ data User =
 newtype UserId =
   UserId
     { unUserId :: ByteString }
-  deriving Generic
+  deriving (Eq, Ord, Generic)
 
 
 newtype UserName =
   UserName
     { unUserName :: Text }
-  deriving Generic
+  deriving (Eq, Ord, Generic)
+
 
 newtype UserEmailAddress =
   UserEmailAddress
     { unUserEmailAddress :: ByteString }
-  deriving Generic
+  deriving (Eq, Ord, Generic)

@@ -24,8 +24,8 @@ data Transaction =
   Transaction
     { id :: TransactionId,
       kind :: TransactionKind,
-      inputs :: TransactionInputs,
-      outputs :: TransactionOutputs,
+      inputs :: TransactionInputs, -- these positions are destroyed
+      outputs :: TransactionOutputs, -- these positions are created
       created :: UTCTime,
       signature :: Signatures
     }

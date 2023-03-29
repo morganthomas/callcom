@@ -28,10 +28,10 @@ data CommodityType =
 newtype CommodityTypeId =
   CommodityTypeId
     { unCommodityTypeId :: ByteString }
-  deriving Generic
+  deriving (Eq, Ord, Generic)
 
 
 newtype CommodityTypeName =
   CommodityTypeName
     { unCommodityTypeName :: Text }
-  deriving Generic
+  deriving (Eq, Ord, Generic)

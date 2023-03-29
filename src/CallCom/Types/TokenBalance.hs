@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.TokenBalance
@@ -12,4 +13,4 @@ import GHC.Generics (Generic)
 newtype TokenBalance =
   TokenBalance
     { unTokenBalance :: Integer }
-  deriving Generic
+  deriving (Eq, Ord, Generic, Num)
