@@ -3,7 +3,7 @@
 
 module CallCom.Types.Transaction
   ( Transaction (Transaction),
-    TransactionKind (Creation, Transfer, Deletion),
+    TransactionPurpose (Creation, Transfer, Deletion, ChangePublicKeyOfTo),
     TransactionId (TransactionId),
     TransactionInputs (TransactionInputs),
     TransactionOutputs (TransactionOutputs),
@@ -12,7 +12,7 @@ module CallCom.Types.Transaction
   ) where
 
 
-import CallCom.Types.Auth (Signature)
+import CallCom.Types.Auth (Signature, UserPublicKey)
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.User (UserId)
 import Data.ByteString (ByteString)
@@ -32,7 +32,7 @@ data SignedTransaction =
 data Transaction =
   Transaction
     { id :: TransactionId,
-      kind :: TransactionKind,
+      purpose :: TransactionPurpose,
       inputs :: TransactionInputs, -- these positions are destroyed
       outputs :: TransactionOutputs, -- these positions are created
       created :: UTCTime
@@ -44,13 +44,14 @@ newtype TransactionId =
   TransactionId
     { unTransactionId :: ByteString
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
-data TransactionKind =
+data TransactionPurpose =
     Creation
   | Transfer
   | Deletion
+  | ChangePublicKeyOfTo UserId UserPublicKey
 
 
 newtype TransactionInputs =

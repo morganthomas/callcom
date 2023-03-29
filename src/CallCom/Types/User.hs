@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.User
@@ -10,6 +11,7 @@ module CallCom.Types.User
 
 
 import CallCom.Types.Auth (UserPublicKey)
+import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Set (Set)
 import Data.Text (Text)
@@ -20,7 +22,6 @@ import GHC.Generics (Generic)
 data User =
   User
    { id :: UserId,
-     email :: UserEmailAddress,
      name :: UserName,
      referrers :: Set UserId,
      created :: UTCTime,
@@ -32,13 +33,13 @@ data User =
 newtype UserId =
   UserId
     { unUserId :: ByteString }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Serialise)
 
 
 newtype UserName =
   UserName
     { unUserName :: Text }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Serialise)
 
 
 newtype UserEmailAddress =

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 
 module CallCom.Types.Ledger
@@ -10,7 +11,7 @@ module CallCom.Types.Ledger
 
 
 import CallCom.Types.Positions (Positions)
-import CallCom.Types.Transaction (TransactionId, Transaction)
+import CallCom.Types.Transaction (TransactionId, SignedTransaction)
 import CallCom.Types.User (UserId, User)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
@@ -28,8 +29,11 @@ data LedgerState =
 
 data Ledger =
     EmptyLedger
+    { created :: UTCTime
+    }
   | Ledger
-    { tip :: BlockId,
+    { created :: UTCTime,
+      tip :: BlockId,
       blocks :: Map BlockId Block
     }
   deriving Generic
@@ -39,7 +43,7 @@ newtype BlockId =
   BlockId
     { unBlockId :: ByteString
     }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 data Block =
@@ -47,6 +51,6 @@ data Block =
     { newUsers :: Map UserId User,
       created :: UTCTime,
       parent :: Maybe BlockId,
-      transactions :: Map TransactionId Transaction
+      transactions :: Map TransactionId SignedTransaction
     }
   deriving Generic

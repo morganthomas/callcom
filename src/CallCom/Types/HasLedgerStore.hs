@@ -13,10 +13,12 @@ import CallCom.Types.Ledger (Ledger (EmptyLedger, Ledger), LedgerState, BlockId,
 import Data.Generics.Labels ()
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Time (UTCTime)
 
 
 class HasLedgerStore m where
   getLedgerState :: m LedgerState
+  getLedgerCreationTime :: m UTCTime
   getLedgerTip :: m (Maybe BlockId)
   getBlock :: BlockId -> m (Maybe Block)
   putBlock :: Block -> m ()
@@ -27,9 +29,10 @@ getLedger
   => m Ledger
 getLedger = do
   tipm <- getLedgerTip
+  t0 <- getLedgerCreationTime
   case tipm of
-    Nothing -> pure EmptyLedger
-    Just tip -> Ledger tip <$> getBlocks tip
+    Nothing -> pure (EmptyLedger t0)
+    Just tip -> Ledger t0 tip <$> getBlocks tip
 
 
 getBlocks
