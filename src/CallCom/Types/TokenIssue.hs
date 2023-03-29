@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module CallCom.Types.TokenType
-  ( TokenType (TokenType),
-    TokenTypeId (TokenTypeId),
+module CallCom.Types.TokenIssue
+  ( TokenIssue (TokenIssue),
+    TokenIssueId (TokenIssueId),
     TokenFraction (TokenFraction)
   ) where
 
@@ -16,9 +16,9 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 
 
-data TokenType =
-  TokenType
-    { id :: TokenTypeId,
+data TokenIssue =
+  TokenIssue
+    { id :: TokenIssueId,
       underlying :: CommodityTypeId,
       fraction :: TokenFraction,
       issuers :: Set UserId,
@@ -27,9 +27,9 @@ data TokenType =
   deriving Generic
 
 
-newtype TokenTypeId =
-  TokenTypeId
-    { unTokenTypeId :: ByteString }
+newtype TokenIssueId =
+  TokenIssueId
+    { unTokenIssueId :: ByteString }
   deriving Generic
 
 

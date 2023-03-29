@@ -8,13 +8,15 @@ maintainer:    morgan.a.s.thomas@gmail.com
 
 library
   exposed-modules:
+    CallCom.Types.Auth
     CallCom.Types.Commodity
     CallCom.Types.CommodityType
     CallCom.Types.HasLedgerStore
     CallCom.Types.Ledger
     CallCom.Types.Positions
     CallCom.Types.TokenBalance
-    CallCom.Types.TokenType
+    CallCom.Types.TokenIndex
+    CallCom.Types.TokenIssue
     CallCom.Types.Transaction
     CallCom.Types.User
 
@@ -26,6 +28,7 @@ library
     containers,
     cryptonite,
     either,
+    ed25519,
     extra,
     generic-lens,
     genvalidity,

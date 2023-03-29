@@ -4,10 +4,12 @@
 module CallCom.Types.User
   ( User (User),
     UserId (UserId),
-    UserName (UserName)
+    UserName (UserName),
+    UserEmailAddress (UserEmailAddress)
   ) where
 
 
+import CallCom.Types.Auth (UserPublicKey)
 import Data.ByteString (ByteString)
 import Data.Set (Set)
 import Data.Text (Text)
@@ -18,9 +20,11 @@ import GHC.Generics (Generic)
 data User =
   User
    { id :: UserId,
+     email :: UserEmailAddress,
      name :: UserName,
      referrers :: Set UserId,
-     created :: UTCTime
+     created :: UTCTime,
+     pubkey :: UserPublicKey
    }
   deriving Generic
 
@@ -34,4 +38,9 @@ newtype UserId =
 newtype UserName =
   UserName
     { unUserName :: Text }
+  deriving Generic
+
+newtype UserEmailAddress =
+  UserEmailAddress
+    { unUserEmailAddress :: ByteString }
   deriving Generic

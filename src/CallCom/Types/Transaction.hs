@@ -6,10 +6,12 @@ module CallCom.Types.Transaction
     TransactionKind (Creation, Transfer, Deletion),
     TransactionId (TransactionId),
     TransactionInputs (TransactionInputs),
-    TransactionOutputs (TransactionOutputs)
+    TransactionOutputs (TransactionOutputs),
+    Signatures (Signatures)
   ) where
 
 
+import CallCom.Types.Auth (Signature)
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.User (UserId)
 import Data.ByteString (ByteString)
@@ -24,7 +26,8 @@ data Transaction =
       kind :: TransactionKind,
       inputs :: TransactionInputs,
       outputs :: TransactionOutputs,
-      created :: UTCTime
+      created :: UTCTime,
+      signature :: Signatures
     }
   deriving Generic
 
@@ -52,5 +55,11 @@ newtype TransactionInputs =
 newtype TransactionOutputs =
   TransactionOutputs
     { unTransactionOutputs :: Map UserId Positions
+    }
+  deriving Generic
+
+newtype Signatures =
+  Signatures
+    { unSignatures :: Map UserId Signature
     }
   deriving Generic

@@ -7,9 +7,10 @@ module CallCom.Types.Positions
 
 
 import CallCom.Types.Commodity (Commodity)
-import CallCom.Types.CommodityType (CommodityType)
+import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.TokenBalance (TokenBalance)
-import CallCom.Types.TokenType (TokenType)
+import CallCom.Types.TokenIssue (TokenIssueId)
+import CallCom.Types.TokenIndex (TokenIndexId)
 import Data.Map (Map)
 import Data.Set (Set)
 import GHC.Generics (Generic)
@@ -17,8 +18,9 @@ import GHC.Generics (Generic)
 
 data Positions =
   Positions
-    { holdings :: Map CommodityType (Set Commodity),
-      credits :: Map TokenType TokenBalance,
-      debts :: Map TokenType TokenBalance
+    { spot :: Map CommodityTypeId (Set Commodity),
+      credits :: Map TokenIssueId TokenBalance,
+      debts :: Map TokenIssueId TokenBalance,
+      indexCredits :: Map TokenIndexId TokenBalance
     }
   deriving Generic
