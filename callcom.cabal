@@ -15,7 +15,6 @@ library
     CallCom.Types.Ledger
     CallCom.Types.Positions
     CallCom.Types.TokenBalance
-    CallCom.Types.TokenIndex
     CallCom.Types.TokenIssue
     CallCom.Types.Transaction
     CallCom.Types.User
