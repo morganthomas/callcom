@@ -6,13 +6,13 @@ module CallCom.Types.Auth
     LoginPasswordHash (LoginPasswordHash),
     SpendingPassword (SpendingPassword),
     SpendingPasswordHash (SpendingPasswordHash),
-    Signature,
+    Signature (Signature),
     UserPublicKey (UserPublicKey),
     UserPrivateKey (UserPrivateKey)
   ) where
 
 
-import Crypto.Sign.Ed25519 (PublicKey, SecretKey, Signature)
+import Crypto.Sign.Ed25519 (PublicKey, SecretKey, Signature (Signature))
 import Data.ByteString (ByteString)
 import GHC.Generics (Generic)
 

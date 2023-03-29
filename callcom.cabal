@@ -8,6 +8,7 @@ maintainer:    morgan.a.s.thomas@gmail.com
 
 library
   exposed-modules:
+    CallCom.Auth
     CallCom.Types.Auth
     CallCom.Types.Commodity
     CallCom.Types.CommodityType
@@ -25,7 +26,7 @@ library
     basement,
     bytestring,
     containers,
-    cryptonite,
+    cryptohash-sha256,
     either,
     ed25519,
     extra,
@@ -46,6 +47,7 @@ library
     QuickCheck,
     random,
     safe,
+    serialise,
     sort,
     sydtest,
     sydtest-discover,

@@ -7,7 +7,8 @@ module CallCom.Types.Transaction
     TransactionId (TransactionId),
     TransactionInputs (TransactionInputs),
     TransactionOutputs (TransactionOutputs),
-    Signatures (Signatures)
+    Signatures (Signatures),
+    SignedTransaction (SignedTransaction)
   ) where
 
 
@@ -20,14 +21,21 @@ import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 
 
+data SignedTransaction =
+  SignedTransaction
+    { unsigned :: Transaction,
+      signatures :: Signatures
+    }
+  deriving Generic
+
+
 data Transaction =
   Transaction
     { id :: TransactionId,
       kind :: TransactionKind,
       inputs :: TransactionInputs, -- these positions are destroyed
       outputs :: TransactionOutputs, -- these positions are created
-      created :: UTCTime,
-      signature :: Signatures
+      created :: UTCTime
     }
   deriving Generic
 
