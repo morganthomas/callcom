@@ -4,7 +4,8 @@
 
 module CallCom.Types.Positions
   ( Positions (Positions),
-    subtractPositions
+    subtractPositions,
+    removeZeroPositions
   ) where
 
 
@@ -27,7 +28,7 @@ data Positions =
       debits :: Map TokenIssueId TokenBalance, -- value owed to the position holder
       credits :: Map TokenIssueId TokenBalance -- value owed by the position holder
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 instance Semigroup Positions where
   p <> q = Positions
@@ -35,12 +36,23 @@ instance Semigroup Positions where
             (Map.unionWith (+) (p ^. #debits) (q ^. #debits))
             (Map.unionWith (+) (p ^. #credits) (q ^. #credits))
 
+
 instance Monoid Positions where
   mempty = Positions mempty mempty mempty
 
+
 subtractPositions :: Positions -> Positions -> Positions
 subtractPositions p q =
+  removeZeroPositions $
   Positions
     (Map.differenceWith (curry (pure . uncurry Set.difference)) (p ^. #spot) (q ^. #spot))
     (Map.unionWith (+) (p ^. #debits) (negate <$> (q ^. #debits)))
     (Map.unionWith (+) (p ^. #credits) (negate <$> (q ^. #credits)))
+
+
+removeZeroPositions :: Positions -> Positions
+removeZeroPositions p =
+  Positions
+    (Map.filter (not . null) (p ^. #spot))
+    (Map.filter (/= 0) (p ^. #debits))
+    (Map.filter (/= 0) (p ^. #credits))

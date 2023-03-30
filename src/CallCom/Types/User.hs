@@ -5,8 +5,7 @@
 module CallCom.Types.User
   ( User (User),
     UserId (UserId),
-    UserName (UserName),
-    UserEmailAddress (UserEmailAddress)
+    UserName (UserName)
   ) where
 
 
@@ -26,22 +25,18 @@ data User =
      created :: UTCTime,
      pubkey :: UserPublicKey
    }
-  deriving Generic
+  deriving (Eq, Generic, Show)
+
+instance Serialise User
 
 
 newtype UserId =
   UserId
     { unUserId :: ByteString }
-  deriving (Eq, Ord, Generic, Serialise)
+  deriving (Eq, Ord, Generic, Serialise, Show)
 
 
 newtype UserName =
   UserName
     { unUserName :: Text }
-  deriving (Eq, Ord, Generic, Serialise)
-
-
-newtype UserEmailAddress =
-  UserEmailAddress
-    { unUserEmailAddress :: ByteString }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Serialise, Show)

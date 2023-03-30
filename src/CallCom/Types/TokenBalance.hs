@@ -13,4 +13,4 @@ import GHC.Generics (Generic)
 newtype TokenBalance =
   TokenBalance
     { unTokenBalance :: Integer }
-  deriving (Eq, Ord, Generic, Num)
+  deriving (Eq, Ord, Generic, Num, Show)

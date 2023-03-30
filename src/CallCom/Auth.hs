@@ -54,6 +54,7 @@ getSignature k =
   Signature . sign (k ^. #unUserPrivateKey) . toStrict . serialise
 
 
-verifySignature :: Serialise a => UserPublicKey -> a -> Bool
-verifySignature k =
-  verify (k ^. #unUserPublicKey) . toStrict . serialise
+verifySignature :: Serialise a => UserPublicKey -> a -> Signature -> Bool
+verifySignature k x (Signature sig) =
+  verify (k ^. #unUserPublicKey)
+    $ toStrict (serialise x) <> sig

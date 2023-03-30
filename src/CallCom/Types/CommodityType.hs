@@ -22,16 +22,16 @@ data CommodityType =
       created :: UTCTime,
       author :: UserId
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
 newtype CommodityTypeId =
   CommodityTypeId
     { unCommodityTypeId :: ByteString }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 newtype CommodityTypeName =
   CommodityTypeName
     { unCommodityTypeName :: Text }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)

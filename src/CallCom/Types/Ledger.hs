@@ -25,7 +25,7 @@ data LedgerState =
     { users :: Map UserId User,
       positions :: Map UserId Positions
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
 data Ledger =
@@ -54,4 +54,4 @@ data Block =
       parent :: Maybe BlockId,
       transactions :: Map TransactionId SignedTransaction
     }
-  deriving Generic
+  deriving (Generic, Show)

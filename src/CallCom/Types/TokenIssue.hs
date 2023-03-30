@@ -24,17 +24,17 @@ data TokenIssue =
       issuers :: Set UserId,
       circulation :: TokenBalance
     }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 newtype TokenIssueId =
   TokenIssueId
     { unTokenIssueId :: ByteString }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 -- The number of tokens per unit of underlying asset
 newtype TokenFraction =
   TokenFraction
     { unTokenFraction :: Int }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)

@@ -26,7 +26,7 @@ data SignedTransaction =
     { unsigned :: Transaction,
       signatures :: Signatures
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
 data Transaction =
@@ -37,7 +37,7 @@ data Transaction =
       outputs :: TransactionOutputs, -- these positions are created
       created :: UTCTime
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
 newtype TransactionId =
@@ -52,23 +52,25 @@ data TransactionPurpose =
   | Transfer
   | Deletion
   | ChangePublicKeyOfTo UserId UserPublicKey
+  deriving Show
 
 
 newtype TransactionInputs =
   TransactionInputs
     { unTransactionInputs :: Map UserId Positions
     }
-  deriving Generic
+  deriving (Generic, Show)
 
 
 newtype TransactionOutputs =
   TransactionOutputs
     { unTransactionOutputs :: Map UserId Positions
     }
-  deriving Generic
+  deriving (Generic, Show)
+
 
 newtype Signatures =
   Signatures
     { unSignatures :: Map UserId Signature
     }
-  deriving Generic
+  deriving (Generic, Show)

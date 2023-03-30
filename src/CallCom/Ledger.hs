@@ -10,15 +10,17 @@ module CallCom.Ledger
   ) where
 
 
-import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey))
+import CallCom.Auth (verifySignature)
+import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey), Signature)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
 import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState))
 import CallCom.Types.Positions (Positions, subtractPositions)
-import CallCom.Types.Transaction (SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
+import CallCom.Types.Transaction (Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
 import CallCom.User (getUserId)
 import Control.Lens ((^.), (.~))
 import Control.Monad (forM_, foldM)
+import Data.Bool (bool)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Text (pack)
@@ -171,7 +173,143 @@ verifyBlock ::
   Block ->
   LedgerState ->
   Either ErrorMessage ()
-verifyBlock = todo
+verifyBlock s0 b s1 = do
+  verifyNoUserIdCollisions s0 b
+  verifyResultingUsers s0 b s1
+  verifyReferrerSignatures s0 b
+  verifyResultingPositions s0 b s1
+  verifyPositionsAreNonNegative s1
+  verifyTransactionsDoNotConsumeSameInputs b
+  verifyTransactions s0 b
+
+
+verifyNoUserIdCollisions ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyNoUserIdCollisions s b =
+  bool
+    (pure ())
+    (Left (ErrorMessage ("tried to create an existing user: " <> pack (show (Map.keys i)))))
+    (null i)
+  where
+    i = Map.intersection (s ^. #users) (b ^. #newUsers)
+
+
+verifyResultingUsers ::
+  LedgerState ->
+  Block ->
+  LedgerState ->
+  Either ErrorMessage ()
+verifyResultingUsers s0 b s1 =
+  bool
+    (pure ())
+    (Left (ErrorMessage ("incorrect resulting users: " <> pack (show (s0, b, s1)))))
+    ((s1 ^. #users) == (s0 ^. #users) `Map.union` (fst <$> (b ^. #newUsers)))
+
+
+verifyReferrerSignatures ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyReferrerSignatures st0 b =
+  forM_ (Map.elems (b ^. #newUsers))
+    (uncurry (verifyReferrerSignature st0))
+
+
+verifyReferrerSignature ::
+  LedgerState ->
+  User ->
+  Signature ->
+  Either ErrorMessage ()
+verifyReferrerSignature s0 u sig = do
+  referrerId <-
+    maybe
+      (Left (ErrorMessage ("no referrer: " <> pack (show u))))
+      pure
+      (u ^. #referrer)
+  referrerPubkey <-
+    maybe
+      (Left (ErrorMessage ("could not find referrer: " <> pack (show (u ^. #referrer)))))
+      (pure . (^. #pubkey))
+      (Map.lookup referrerId (s0 ^. #users))
+  bool
+    (pure ())
+    (Left (ErrorMessage ("referrer signature check failed: " <> pack (show (u, sig)))))
+    (verifySignature referrerPubkey u sig)
+
+
+verifyResultingPositions ::
+  LedgerState ->
+  Block ->
+  LedgerState ->
+  Either ErrorMessage ()
+verifyResultingPositions = todo
+
+
+verifyPositionsAreNonNegative ::
+  LedgerState ->
+  Either ErrorMessage ()
+verifyPositionsAreNonNegative = todo
+
+
+verifyTransactions ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyTransactions = todo verifyTransaction
+
+
+verifyTransactionsDoNotConsumeSameInputs ::
+  Block ->
+  Either ErrorMessage ()
+verifyTransactionsDoNotConsumeSameInputs = todo
+
+
+verifyTransaction ::
+  LedgerState ->
+  SignedTransaction ->
+  Either ErrorMessage ()
+verifyTransaction s0 st@(SignedTransaction t _) = do
+  verifyTransactionSignatures s0 st
+  verifyThereAreEnoughSignatures st
+  verifyTransactionInputsExist s0 t
+  verifyTransactionBalances t
+  verifyTransactionPurpose t
+
+
+verifyTransactionSignatures ::
+  LedgerState ->
+  SignedTransaction ->
+  Either ErrorMessage ()
+verifyTransactionSignatures = todo
+
+
+verifyThereAreEnoughSignatures ::
+  SignedTransaction ->
+  Either ErrorMessage ()
+verifyThereAreEnoughSignatures = todo
+
+
+verifyTransactionInputsExist ::
+  LedgerState ->
+  Transaction ->
+  Either ErrorMessage ()
+verifyTransactionInputsExist = todo
+
+
+verifyTransactionBalances ::
+  Transaction  ->
+  Either ErrorMessage ()
+verifyTransactionBalances = todo
+
+
+-- Verify that the content of the transaction is
+-- consistent with the stated purpose.
+verifyTransactionPurpose ::
+  Transaction ->
+  Either ErrorMessage ()
+verifyTransactionPurpose = todo
 
 
 todo :: a

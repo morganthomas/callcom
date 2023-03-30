@@ -24,16 +24,16 @@ data Commodity =
       description :: Maybe CommodityDescription,
       owner :: UserId
     }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 newtype CommodityDescription =
   CommodityDescription
     { unCommodityDescription :: Map Text Text }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)
 
 
 newtype CommodityId =
   CommodityId
     { unCommodityId :: ByteString }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Show)

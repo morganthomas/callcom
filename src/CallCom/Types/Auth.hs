@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 
 module CallCom.Types.Auth
@@ -14,10 +16,13 @@ module CallCom.Types.Auth
   ) where
 
 
+import Codec.Serialise (Serialise)
 import Crypto.Sign.Ed25519 (PublicKey (PublicKey), SecretKey (SecretKey), Signature (Signature))
 import Data.ByteString (ByteString)
 import GHC.Generics (Generic)
 
+
+instance Serialise PublicKey
 
 newtype LoginPassword =
   LoginPassword { unLoginPassword :: ByteString }
@@ -37,8 +42,8 @@ newtype SpendingPasswordHash =
 
 newtype UserPublicKey =
   UserPublicKey { unUserPublicKey :: PublicKey }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show, Serialise)
 
 newtype UserPrivateKey =
   UserPrivateKey { unUserPrivateKey :: SecretKey }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
