@@ -19,12 +19,13 @@ import GHC.Generics (Generic)
 
 data CommodityType =
   CommodityType
-    { id :: CommodityTypeId,
-      name :: CommodityTypeName,
+    { name :: CommodityTypeName,
       created :: UTCTime,
       author :: UserId
     }
   deriving (Generic, Show)
+
+instance Serialise CommodityType
 
 
 newtype CommodityTypeId =
@@ -36,4 +37,4 @@ newtype CommodityTypeId =
 newtype CommodityTypeName =
   CommodityTypeName
     { unCommodityTypeName :: Text }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)

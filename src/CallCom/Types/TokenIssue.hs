@@ -20,8 +20,7 @@ import GHC.Generics (Generic)
 
 data TokenIssue =
   TokenIssue
-    { id :: TokenIssueId,
-      underlying :: CommodityTypeId,
+    { underlying :: CommodityTypeId,
       fraction :: TokenFraction,
       issuers :: Set UserId,
       circulation :: TokenBalance

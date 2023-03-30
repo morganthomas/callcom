@@ -53,10 +53,10 @@ newtype TransactionId =
 
 data TransactionPurpose =
     Creation -- creating new commodities
+  | Deletion -- deleting commodities
   | Issuance -- issuing a credit and a debit
   | Transfer -- transferring commodities, credits, and/or debits
-  | Deletion -- deleting commodities
-  | Redemption -- deleting a credit and a debit while exchanging the underlying
+  | Cancellation -- deleting a credit and a debit
   | ChangePublicKeyOfTo UserId UserPublicKey -- change spending password pubkey
   deriving (Generic, Show)
 

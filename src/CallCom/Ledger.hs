@@ -11,6 +11,8 @@ module CallCom.Ledger
 
 
 import CallCom.Auth (verifySignature)
+import CallCom.CommodityType (getCommodityTypeId)
+import CallCom.TokenIssue (getTokenIssueId)
 import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey), Signature)
 import CallCom.Types.Commodity (CommodityId)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
@@ -212,7 +214,14 @@ verifyNoCommodityTypeIdCollisions ::
   LedgerState ->
   Block ->
   Either ErrorMessage ()
-verifyNoCommodityTypeIdCollisions = todo
+verifyNoCommodityTypeIdCollisions s0 b =
+  bool
+    (pure ())
+    (Left (ErrorMessage ("token issue id hash collision (most likely a duplicate token issue): " <> pack (show (Map.keys i)))))
+    (null i)
+  where
+    i = Map.intersection (s0 ^. #commodityTypes) (b ^. #newCommodityTypes)
+
 
 
 -- Verify the block does not try to create a token issue with the same id
@@ -234,14 +243,25 @@ verifyNoTokenIssueIdCollisions s b =
 verifyTokenIssueIds ::
   Block ->
   Either ErrorMessage ()
-verifyTokenIssueIds = todo
+verifyTokenIssueIds b =
+  forM_ (Map.toList (b ^. #newTokenIssues))
+    $ \(iId, (i, _)) ->
+      bool
+        (pure ())
+        (Left (ErrorMessage ("token issue id is not the expected hash: " <> pack (show (iId, i)))))
+        (getTokenIssueId i == iId)
 
 
 -- Verify the commodity type ids are the hashes of the commodity types.
 verifyCommodityTypeIds ::
   Block ->
   Either ErrorMessage ()
-verifyCommodityTypeIds = todo
+verifyCommodityTypeIds b =
+  forM_ (Map.toList (b ^. #newCommodityTypes)) $ \(tid, (t, _)) ->
+    bool
+      (pure ())
+      (Left (ErrorMessage ("commodity type id is not the expected hash: " <> pack (show (tid, t)))))
+      (getCommodityTypeId t == tid)
 
 
 -- Verify new commodity type signatures are valid and from the
@@ -250,7 +270,14 @@ verifyCommodityTypeSignatures ::
   LedgerState ->
   Block ->
   Either ErrorMessage ()
-verifyCommodityTypeSignatures = todo
+verifyCommodityTypeSignatures s0 b =
+  forM_ (Map.elems (b ^. #newCommodityTypes))
+    $ \(t, sig) -> do
+      pubkey <- getUserPublicKey s0 (t ^. #author)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "signature verification failed: " <> pack (show (t, sig)))
+        (verifySignature pubkey t sig)
 
 
 -- Verify new token issue signatures are valid and from all of the
@@ -259,7 +286,20 @@ verifyTokenIssueSignatures ::
   LedgerState ->
   Block ->
   Either ErrorMessage ()
-verifyTokenIssueSignatures = todo
+verifyTokenIssueSignatures s0 b =
+  forM_ (Map.elems (b ^. #newTokenIssues))
+    $ \(i, sigs) -> do
+      let d = (i ^. #issuers) `Set.difference` Map.keysSet (sigs ^. #unSignatures)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "missing issuer signature: " <> pack (show (d, i, sigs)))
+        (null d)
+      forM_ (Map.toList (sigs ^. #unSignatures)) $ \(uid, sig) -> do
+        pubkey <- getUserPublicKey s0 uid
+        bool
+          (pure ())
+          (Left . ErrorMessage $ "signature verification failed: " <> pack (show (i, uid, pubkey, sig)))
+          (verifySignature pubkey i sig)
 
 
 -- Verify the block does not try to create a user with the same id as an
@@ -277,11 +317,16 @@ verifyNoUserIdCollisions s b =
     i = Map.intersection (s ^. #users) (b ^. #newUsers)
 
 
--- Verify the new user ids are the hashes of the users.
+-- Verify the new user ids are the hashes of the users' names and creation dates.
 verifyUserIds ::
   Block ->
   Either ErrorMessage ()
-verifyUserIds = todo
+verifyUserIds b =
+  forM_ (Map.toList (b ^. #newUsers)) $ \(uid, (u, _)) ->
+    bool
+      (pure ())
+      (Left (ErrorMessage ("user's id is not the expected hash: " <> pack (show (uid, u)))))
+      (getUserId (u ^. #name) (u ^. #created) == uid)
 
 
 -- Verify the resulting state has the correct users in it (the new + the old).
@@ -468,7 +513,9 @@ getRequiredSignatories t =
 getInputAndOutputOwners ::
   Transaction ->
   Set UserId
-getInputAndOutputOwners = todo
+getInputAndOutputOwners t =
+  Map.keysSet (t ^. #inputs . #unTransactionInputs)
+    <> Map.keysSet (t ^. #outputs . #unTransactionOutputs)
 
 
 getUserPublicKey ::
@@ -499,7 +546,7 @@ verifyTransactionInputsExist ::
 verifyTransactionInputsExist = todo
 
 
--- Verify that the transaction conserves value, if it is a transfer.
+-- Verify that the transaction conserves value, if it is a transfer, issuance, or cancellation.
 verifyTransactionBalances ::
   Transaction  ->
   Either ErrorMessage ()
