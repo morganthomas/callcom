@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.TokenIssue
@@ -11,6 +12,7 @@ module CallCom.Types.TokenIssue
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.TokenBalance (TokenBalance)
 import CallCom.Types.User (UserId)
+import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Set (Set)
 import GHC.Generics (Generic)
@@ -26,15 +28,17 @@ data TokenIssue =
     }
   deriving (Eq, Ord, Generic, Show)
 
+instance Serialise TokenIssue
+
 
 newtype TokenIssueId =
   TokenIssueId
     { unTokenIssueId :: ByteString }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)
 
 
 -- The number of tokens per unit of underlying asset
 newtype TokenFraction =
   TokenFraction
     { unTokenFraction :: Int }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)

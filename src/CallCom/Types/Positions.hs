@@ -13,6 +13,7 @@ import CallCom.Types.Commodity (Commodity)
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.TokenBalance (TokenBalance)
 import CallCom.Types.TokenIssue (TokenIssueId)
+import Codec.Serialise (Serialise)
 import Control.Lens ((^.))
 import Data.Generics.Labels ()
 import Data.Map (Map)
@@ -28,7 +29,9 @@ data Positions =
       debits :: Map TokenIssueId TokenBalance, -- value owed to the position holder
       credits :: Map TokenIssueId TokenBalance -- value owed by the position holder
     }
-  deriving (Generic, Show)
+  deriving (Eq, Generic, Show)
+
+instance Serialise Positions
 
 instance Semigroup Positions where
   p <> q = Positions

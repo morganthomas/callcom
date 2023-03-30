@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.Transaction
@@ -15,6 +16,7 @@ module CallCom.Types.Transaction
 import CallCom.Types.Auth (Signature, UserPublicKey)
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.User (UserId)
+import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Time.Clock (UTCTime)
@@ -39,12 +41,14 @@ data Transaction =
     }
   deriving (Generic, Show)
 
+instance Serialise Transaction
+
 
 newtype TransactionId =
   TransactionId
     { unTransactionId :: ByteString
     }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Serialise)
 
 
 data TransactionPurpose =
@@ -52,21 +56,23 @@ data TransactionPurpose =
   | Transfer
   | Deletion
   | ChangePublicKeyOfTo UserId UserPublicKey
-  deriving Show
+  deriving (Generic, Show)
+
+instance Serialise TransactionPurpose
 
 
 newtype TransactionInputs =
   TransactionInputs
     { unTransactionInputs :: Map UserId Positions
     }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Serialise)
 
 
 newtype TransactionOutputs =
   TransactionOutputs
     { unTransactionOutputs :: Map UserId Positions
     }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Serialise)
 
 
 newtype Signatures =

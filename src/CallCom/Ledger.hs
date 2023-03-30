@@ -12,17 +12,19 @@ module CallCom.Ledger
 
 import CallCom.Auth (verifySignature)
 import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey), Signature)
+import CallCom.Types.Commodity (CommodityId)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
 import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState))
 import CallCom.Types.Positions (Positions, subtractPositions)
-import CallCom.Types.Transaction (Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
+import CallCom.Types.Transaction (TransactionId, Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
 import CallCom.User (getUserId)
-import Control.Lens ((^.), (.~))
-import Control.Monad (forM_, foldM)
+import Control.Lens ((^.), (.~), (<&>))
+import Control.Monad (forM_, foldM, void)
 import Data.Bool (bool)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Time (UTCTime)
 
@@ -183,6 +185,8 @@ verifyBlock s0 b s1 = do
   verifyTransactions s0 b
 
 
+-- Verify the block does not try to create a user with the same id as an
+-- existing user.
 verifyNoUserIdCollisions ::
   LedgerState ->
   Block ->
@@ -196,6 +200,7 @@ verifyNoUserIdCollisions s b =
     i = Map.intersection (s ^. #users) (b ^. #newUsers)
 
 
+-- Verify the resulting state has the correct users in it (the new + the old).
 verifyResultingUsers ::
   LedgerState ->
   Block ->
@@ -208,6 +213,8 @@ verifyResultingUsers s0 b s1 =
     ((s1 ^. #users) == (s0 ^. #users) `Map.union` (fst <$> (b ^. #newUsers)))
 
 
+-- Verify that each new user comes with the signature of the referrer
+-- who is an existing user.
 verifyReferrerSignatures ::
   LedgerState ->
   Block ->
@@ -239,33 +246,81 @@ verifyReferrerSignature s0 u sig = do
     (verifySignature referrerPubkey u sig)
 
 
+-- Verifies that the positions in the resulting state are the correct ones.
 verifyResultingPositions ::
   LedgerState ->
   Block ->
   LedgerState ->
   Either ErrorMessage ()
-verifyResultingPositions = todo
+verifyResultingPositions s0 b s1 = do
+  s1' <- applyBlockToLedgerState s0 b
+  bool
+    (pure ())
+    (Left . ErrorMessage $
+      "resulting positions are not as expected; expected "
+        <> pack (show (s1' ^. #positions))
+        <> " but got " <> pack (show (s1 ^. #positions)))
+    (s1' ^. #positions == s1 ^. #positions)
 
 
+-- Verifies that all positions in the ledger state are non-negative.
 verifyPositionsAreNonNegative ::
   LedgerState ->
   Either ErrorMessage ()
-verifyPositionsAreNonNegative = todo
+verifyPositionsAreNonNegative s =
+  bool
+    (pure ())
+    (Left . ErrorMessage $ "negative position: "
+      <> pack (show s))
+    (all (all (>= 0)) (s ^. #positions <&> (^. #debits)) &&
+      all (all (>= 0)) (s ^. #positions <&> (^. #credits)))
 
 
+-- Verifies all conditions required for individual validity of a
+-- transaction, for each transaction in a block.
 verifyTransactions ::
   LedgerState ->
   Block ->
   Either ErrorMessage ()
-verifyTransactions = todo verifyTransaction
+verifyTransactions s0 b =
+  forM_ (b ^. #transactions) (verifyTransaction s0)
 
 
+-- Verifies that each spot position (i.e., each commodity)
+-- consumed in a block is consumed by a unique transaction in the block.
+-- This is checked by checking that we can construct a complete map from
+-- commodity id to id of transaction consuming it, without encountering
+-- any inconsistencies.
 verifyTransactionsDoNotConsumeSameInputs ::
   Block ->
   Either ErrorMessage ()
-verifyTransactionsDoNotConsumeSameInputs = todo
+verifyTransactionsDoNotConsumeSameInputs b =
+  void $ foldM addSpotInputsToConsumersMap mempty (b ^. #transactions)
 
 
+addSpotInputsToConsumersMap ::
+  Map CommodityId TransactionId ->
+  SignedTransaction ->
+  Either ErrorMessage (Map CommodityId TransactionId)
+addSpotInputsToConsumersMap m t =
+  foldM (addSpotInputToConsumersMap (t ^. #unsigned . #id)) m
+    (concat (Map.elems (t ^. #unsigned . #inputs . #unTransactionInputs)
+      <&> concatMap (fmap (^. #id) . Set.toList) . Map.elems . (^. #spot)))
+
+
+addSpotInputToConsumersMap ::
+  TransactionId ->
+  Map CommodityId TransactionId ->
+  CommodityId ->
+  Either ErrorMessage (Map CommodityId TransactionId)
+addSpotInputToConsumersMap tid m cid =
+  maybe
+    (pure (Map.insert cid tid m))
+    (const (Left (ErrorMessage ("tried to double spend commidity id: " <> pack (show cid)))))
+    (Map.lookup cid m)
+
+
+-- Verifies all conditions required for individual validity of a transaction.
 verifyTransaction ::
   LedgerState ->
   SignedTransaction ->
@@ -278,19 +333,59 @@ verifyTransaction s0 st@(SignedTransaction t _) = do
   verifyTransactionPurpose t
 
 
+-- Check that all signatures are valid.
 verifyTransactionSignatures ::
   LedgerState ->
   SignedTransaction ->
   Either ErrorMessage ()
-verifyTransactionSignatures = todo
+verifyTransactionSignatures s t =
+  forM_ (Map.toList (t ^. #signatures . #unSignatures)) $ \(uid, sig) ->
+    verifyTransactionSignature s (t ^. #unsigned) uid sig
 
 
+verifyTransactionSignature ::
+  LedgerState ->
+  Transaction ->
+  UserId ->
+  Signature ->
+  Either ErrorMessage ()
+verifyTransactionSignature s t uid sig = do
+  pubkey <- getUserPublicKey s uid
+  bool
+    (pure ())
+    (Left . ErrorMessage $ "signature verification failed: "
+      <> pack (show (t, uid, sig)))
+    (verifySignature pubkey t sig)
+
+
+-- Check that all required signatories have provided signatures.
 verifyThereAreEnoughSignatures ::
   SignedTransaction ->
   Either ErrorMessage ()
 verifyThereAreEnoughSignatures = todo
 
 
+getUserPublicKey ::
+  LedgerState ->
+  UserId ->
+  Either ErrorMessage UserPublicKey
+getUserPublicKey = curry (fmap (^. #pubkey) . uncurry getUser)
+
+
+getUser ::
+  LedgerState ->
+  UserId ->
+  Either ErrorMessage User
+getUser s uid =
+  maybe
+    (Left (ErrorMessage "getUser: not found"))
+    pure
+    (Map.lookup uid (s ^. #users))
+
+
+-- Verify that there is no spending from a zero balance or
+-- spending of a commodity which was not previously declared
+-- to exist.
 verifyTransactionInputsExist ::
   LedgerState ->
   Transaction ->
@@ -298,6 +393,7 @@ verifyTransactionInputsExist ::
 verifyTransactionInputsExist = todo
 
 
+-- Verify that the transaction conserves value, if it is a transfer.
 verifyTransactionBalances ::
   Transaction  ->
   Either ErrorMessage ()

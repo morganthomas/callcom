@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.CommodityType
@@ -9,6 +10,7 @@ module CallCom.Types.CommodityType
 
 
 import CallCom.Types.User (UserId)
+import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Time (UTCTime)
@@ -28,7 +30,7 @@ data CommodityType =
 newtype CommodityTypeId =
   CommodityTypeId
     { unCommodityTypeId :: ByteString }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)
 
 
 newtype CommodityTypeName =

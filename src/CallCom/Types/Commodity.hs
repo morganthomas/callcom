@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.Commodity
@@ -10,6 +11,7 @@ module CallCom.Types.Commodity
 
 import CallCom.Types.CommodityType (CommodityTypeId)
 import CallCom.Types.User (UserId)
+import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Set (Set)
@@ -26,14 +28,16 @@ data Commodity =
     }
   deriving (Eq, Ord, Generic, Show)
 
+instance Serialise Commodity
+
 
 newtype CommodityDescription =
   CommodityDescription
     { unCommodityDescription :: Map Text Text }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)
 
 
 newtype CommodityId =
   CommodityId
     { unCommodityId :: ByteString }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, Serialise)

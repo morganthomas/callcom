@@ -11,12 +11,12 @@ module CallCom.Auth
   ) where
 
 
-import CallCom.Types.Auth (LoginPassword, LoginPasswordHash (LoginPasswordHash), Signature (Signature), SpendingPassword, SpendingPasswordHash (SpendingPasswordHash), UserPrivateKey (UserPrivateKey), UserPublicKey (UserPublicKey))
+import CallCom.Types.Auth (LoginPassword, LoginPasswordHash (LoginPasswordHash), Signature, SpendingPassword, SpendingPasswordHash (SpendingPasswordHash), UserPrivateKey (UserPrivateKey), UserPublicKey (UserPublicKey))
 import Codec.Serialise (Serialise, serialise)
 import Control.Arrow ((***))
 import Control.Lens ((^.))
 import Crypto.Hash.SHA256 (hash)
-import Crypto.Sign.Ed25519 (createKeypairFromSeed_, sign, verify)
+import Crypto.Sign.Ed25519 (createKeypairFromSeed_, dsign, dverify)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
 import Data.Generics.Labels ()
@@ -51,10 +51,9 @@ getUserKeyPair =
 
 getSignature :: Serialise a => UserPrivateKey -> a -> Signature
 getSignature k =
-  Signature . sign (k ^. #unUserPrivateKey) . toStrict . serialise
+  dsign (k ^. #unUserPrivateKey) . toStrict . serialise
 
 
 verifySignature :: Serialise a => UserPublicKey -> a -> Signature -> Bool
-verifySignature k x (Signature sig) =
-  verify (k ^. #unUserPublicKey)
-    $ toStrict (serialise x) <> sig
+verifySignature k x sig =
+  dverify (k ^. #unUserPublicKey) (toStrict (serialise x)) sig

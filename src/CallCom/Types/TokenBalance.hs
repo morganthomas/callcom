@@ -7,10 +7,11 @@ module CallCom.Types.TokenBalance
   ) where
 
 
+import Codec.Serialise (Serialise)
 import GHC.Generics (Generic)
 
 
 newtype TokenBalance =
   TokenBalance
     { unTokenBalance :: Integer }
-  deriving (Eq, Ord, Generic, Num, Show)
+  deriving (Eq, Ord, Generic, Num, Show, Serialise)
