@@ -10,6 +10,7 @@ module CallCom.Types.Ledger
   ) where
 
 
+import CallCom.Types.Auth (Signature)
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.Transaction (TransactionId, SignedTransaction)
 import CallCom.Types.User (UserId, User)
@@ -48,7 +49,7 @@ newtype BlockId =
 
 data Block =
   Block
-    { newUsers :: Map UserId User,
+    { newUsers :: Map UserId (User, Signature),
       created :: UTCTime,
       parent :: Maybe BlockId,
       transactions :: Map TransactionId SignedTransaction

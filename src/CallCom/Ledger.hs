@@ -13,8 +13,8 @@ module CallCom.Ledger
 import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey))
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
 import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState))
-import CallCom.Types.Positions (Positions)
-import CallCom.Types.Transaction (SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs)
+import CallCom.Types.Positions (Positions, subtractPositions)
+import CallCom.Types.Transaction (SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
 import CallCom.User (getUserId)
 import Control.Lens ((^.), (.~))
@@ -72,7 +72,7 @@ initialLedgerState t0 =
     initUser =
       User initUserId
         (UserName "morgan.thomas")
-        mempty
+        Nothing
         t0
         (UserPublicKey (PublicKey "r\GS#qT\205i\189\228$\233\129\158\131\227\220\170i~\228[\229N\155\128\191:2\a \208X"))
 
@@ -121,7 +121,7 @@ applyBlockToLedgerState ::
   Either ErrorMessage LedgerState
 applyBlockToLedgerState s0 b = do
   s1 <- foldM applyTransactionToLedgerState s0 (Map.elems (b ^. #transactions))
-  pure (LedgerState (s1 ^. #users <> (b ^. #newUsers)) (s1 ^. #positions))
+  pure (LedgerState (s1 ^. #users <> (fst <$> (b ^. #newUsers))) (s1 ^. #positions))
 
 
 applyTransactionToLedgerState ::
@@ -142,28 +142,30 @@ applyTransactionToLedgerState s (SignedTransaction t _) =
             "tried to change pubkey of a non-existent user: txid "
               <> pack (show (t ^. #id))
     _ ->
-      LedgerState (s ^. #users) <$>
-        (createPositions
-           (t ^. #outputs)
-           =<< destroyPositions
+      pure . LedgerState (s ^. #users) .
+        createPositions (t ^. #outputs)
+           $ destroyPositions
                (t ^. #inputs)
-               (s ^. #positions))
+               (s ^. #positions)
 
 
 createPositions ::
   TransactionOutputs ->
   Map UserId Positions ->
-  Either ErrorMessage (Map UserId Positions)
-createPositions = todo
+  Map UserId Positions
+createPositions (TransactionOutputs outs) x =
+  x <> outs
 
 
 destroyPositions ::
   TransactionInputs ->
   Map UserId Positions ->
-  Either ErrorMessage (Map UserId Positions)
-destroyPositions = todo
+  Map UserId Positions
+destroyPositions =
+  Map.differenceWith (curry (pure . uncurry subtractPositions)) . (^. #unTransactionInputs)
 
 
+-- Verify that the given block is valid relative to the given initial and resulting states.
 verifyBlock ::
   LedgerState ->
   Block ->

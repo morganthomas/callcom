@@ -3,7 +3,8 @@
 
 
 module CallCom.Types.Positions
-  ( Positions (Positions)
+  ( Positions (Positions),
+    subtractPositions
   ) where
 
 
@@ -16,6 +17,7 @@ import Data.Generics.Labels ()
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 
 
@@ -35,3 +37,10 @@ instance Semigroup Positions where
 
 instance Monoid Positions where
   mempty = Positions mempty mempty mempty
+
+subtractPositions :: Positions -> Positions -> Positions
+subtractPositions p q =
+  Positions
+    (Map.differenceWith (curry (pure . uncurry Set.difference)) (p ^. #spot) (q ^. #spot))
+    (Map.unionWith (+) (p ^. #debits) (negate <$> (q ^. #debits)))
+    (Map.unionWith (+) (p ^. #credits) (negate <$> (q ^. #credits)))

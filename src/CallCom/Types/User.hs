@@ -13,7 +13,6 @@ module CallCom.Types.User
 import CallCom.Types.Auth (UserPublicKey)
 import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
-import Data.Set (Set)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
@@ -23,7 +22,7 @@ data User =
   User
    { id :: UserId,
      name :: UserName,
-     referrers :: Set UserId,
+     referrer :: Maybe UserId,
      created :: UTCTime,
      pubkey :: UserPublicKey
    }
