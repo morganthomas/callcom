@@ -24,7 +24,9 @@ import GHC.Generics (Generic)
 
 data LedgerState =
   LedgerState
-    { users :: Map UserId User,
+    { commodityTypes :: Map CommodityTypeId CommodityType,
+      tokenIssues :: Map TokenIssueId TokenIssue,
+      users :: Map UserId User,
       positions :: Map UserId Positions
     }
   deriving (Generic, Show)
@@ -51,9 +53,9 @@ newtype BlockId =
 
 data Block =
   Block
-    { newUsers :: Map UserId (User, Signature),
-      newCommodityTypes :: Map CommodityTypeId (CommodityType, Signature),
+    { newCommodityTypes :: Map CommodityTypeId (CommodityType, Signature),
       newTokenIssues :: Map TokenIssueId (TokenIssue, Signatures),
+      newUsers :: Map UserId (User, Signature),
       created :: UTCTime,
       parent :: Maybe BlockId,
       transactions :: Map TransactionId SignedTransaction

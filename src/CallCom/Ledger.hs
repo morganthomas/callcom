@@ -24,6 +24,7 @@ import Control.Monad (forM_, foldM, void)
 import Data.Bool (bool)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Time (UTCTime)
@@ -68,6 +69,8 @@ verifyLedger l = do
 initialLedgerState :: UTCTime -> LedgerState
 initialLedgerState t0 =
   LedgerState
+    mempty
+    mempty
     (Map.singleton initUserId initUser)
     mempty
   where
@@ -125,7 +128,12 @@ applyBlockToLedgerState ::
   Either ErrorMessage LedgerState
 applyBlockToLedgerState s0 b = do
   s1 <- foldM applyTransactionToLedgerState s0 (Map.elems (b ^. #transactions))
-  pure (LedgerState (s1 ^. #users <> (fst <$> (b ^. #newUsers))) (s1 ^. #positions))
+  pure $
+    LedgerState
+      (s1 ^. #commodityTypes <> (fst <$> (b ^. #newCommodityTypes)))
+      (s1 ^. #tokenIssues <> (fst <$> (b ^. #newTokenIssues)))
+      (s1 ^. #users <> (fst <$> (b ^. #newUsers)))
+      (s1 ^. #positions)
 
 
 applyTransactionToLedgerState ::
@@ -139,6 +147,8 @@ applyTransactionToLedgerState s (SignedTransaction t _) =
         Just u ->
           pure
             (LedgerState
+              (s ^. #commodityTypes)
+              (s ^. #tokenIssues)
               (Map.insert uid (#pubkey .~ newKey $ u) (s ^. #users))
               (s ^. #positions))
         Nothing ->
@@ -146,8 +156,12 @@ applyTransactionToLedgerState s (SignedTransaction t _) =
             "tried to change pubkey of a non-existent user: txid "
               <> pack (show (t ^. #id))
     _ ->
-      pure . LedgerState (s ^. #users) .
-        createPositions (t ^. #outputs)
+      pure
+        . LedgerState
+            (s ^. #commodityTypes)
+            (s ^. #tokenIssues)
+            (s ^. #users)
+        . createPositions (t ^. #outputs)
            $ destroyPositions
                (t ^. #inputs)
                (s ^. #positions)
@@ -176,13 +190,76 @@ verifyBlock ::
   LedgerState ->
   Either ErrorMessage ()
 verifyBlock s0 b s1 = do
+  verifyNoCommodityTypeIdCollisions s0 b
+  verifyCommodityTypeIds b
+  verifyCommodityTypeSignatures s0 b
+  verifyNoTokenIssueIdCollisions s0 b
+  verifyTokenIssueIds b
+  verifyTokenIssueSignatures s0 b
   verifyNoUserIdCollisions s0 b
+  verifyUserIds b
   verifyResultingUsers s0 b s1
   verifyReferrerSignatures s0 b
   verifyResultingPositions s0 b s1
   verifyPositionsAreNonNegative s1
   verifyTransactionsDoNotConsumeSameInputs b
   verifyTransactions s0 b
+
+
+-- Verify the block does not try to create a commodity type with the same
+-- id as an existing commodity type.
+verifyNoCommodityTypeIdCollisions ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyNoCommodityTypeIdCollisions = todo
+
+
+-- Verify the block does not try to create a token issue with the same id
+-- as an existing token issue.
+verifyNoTokenIssueIdCollisions ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyNoTokenIssueIdCollisions s b =
+  bool
+    (pure ())
+    (Left (ErrorMessage ("token issue id hash collision (most likely a duplicate token issue): " <> pack (show (Map.keys i)))))
+    (null i)
+  where
+    i = Map.intersection (s ^. #tokenIssues) (b ^. #newTokenIssues)
+
+
+-- Verify the token issue ids are the hashes of the token issues.
+verifyTokenIssueIds ::
+  Block ->
+  Either ErrorMessage ()
+verifyTokenIssueIds = todo
+
+
+-- Verify the commodity type ids are the hashes of the commodity types.
+verifyCommodityTypeIds ::
+  Block ->
+  Either ErrorMessage ()
+verifyCommodityTypeIds = todo
+
+
+-- Verify new commodity type signatures are valid and from the
+-- stated creator.
+verifyCommodityTypeSignatures ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyCommodityTypeSignatures = todo
+
+
+-- Verify new token issue signatures are valid and from all of the
+-- stated issuers.
+verifyTokenIssueSignatures ::
+  LedgerState ->
+  Block ->
+  Either ErrorMessage ()
+verifyTokenIssueSignatures = todo
 
 
 -- Verify the block does not try to create a user with the same id as an
@@ -194,10 +271,17 @@ verifyNoUserIdCollisions ::
 verifyNoUserIdCollisions s b =
   bool
     (pure ())
-    (Left (ErrorMessage ("tried to create an existing user: " <> pack (show (Map.keys i)))))
+    (Left (ErrorMessage ("user id hash collision (most likely a duplicate user): " <> pack (show (Map.keys i)))))
     (null i)
   where
     i = Map.intersection (s ^. #users) (b ^. #newUsers)
+
+
+-- Verify the new user ids are the hashes of the users.
+verifyUserIds ::
+  Block ->
+  Either ErrorMessage ()
+verifyUserIds = todo
 
 
 -- Verify the resulting state has the correct users in it (the new + the old).
@@ -362,7 +446,29 @@ verifyTransactionSignature s t uid sig = do
 verifyThereAreEnoughSignatures ::
   SignedTransaction ->
   Either ErrorMessage ()
-verifyThereAreEnoughSignatures = todo
+verifyThereAreEnoughSignatures t =
+  bool
+    (pure ())
+    (Left (ErrorMessage ("missing required signatories: " <> pack (show d))))
+    (null d)
+  where
+    d = getRequiredSignatories (t ^. #unsigned)
+          `Set.difference` Map.keysSet (t ^. #signatures . #unSignatures)
+
+
+getRequiredSignatories ::
+  Transaction ->
+  Set UserId
+getRequiredSignatories t =
+  case t ^. #purpose of
+    ChangePublicKeyOfTo uid _ -> Set.singleton uid
+    _ -> getInputAndOutputOwners t
+
+
+getInputAndOutputOwners ::
+  Transaction ->
+  Set UserId
+getInputAndOutputOwners = todo
 
 
 getUserPublicKey ::
