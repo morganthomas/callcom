@@ -52,10 +52,12 @@ newtype TransactionId =
 
 
 data TransactionPurpose =
-    Creation
-  | Transfer
-  | Deletion
-  | ChangePublicKeyOfTo UserId UserPublicKey
+    Creation -- creating new commodities
+  | Issuance -- issuing a credit and a debit
+  | Transfer -- transferring commodities, credits, and/or debits
+  | Deletion -- deleting commodities
+  | Redemption -- deleting a credit and a debit while exchanging the underlying
+  | ChangePublicKeyOfTo UserId UserPublicKey -- change spending password pubkey
   deriving (Generic, Show)
 
 instance Serialise TransactionPurpose

@@ -11,8 +11,10 @@ module CallCom.Types.Ledger
 
 
 import CallCom.Types.Auth (Signature)
+import CallCom.Types.CommodityType (CommodityTypeId, CommodityType)
 import CallCom.Types.Positions (Positions)
-import CallCom.Types.Transaction (TransactionId, SignedTransaction)
+import CallCom.Types.TokenIssue (TokenIssueId, TokenIssue)
+import CallCom.Types.Transaction (TransactionId, SignedTransaction, Signatures)
 import CallCom.Types.User (UserId, User)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
@@ -50,6 +52,8 @@ newtype BlockId =
 data Block =
   Block
     { newUsers :: Map UserId (User, Signature),
+      newCommodityTypes :: Map CommodityTypeId (CommodityType, Signature),
+      newTokenIssues :: Map TokenIssueId (TokenIssue, Signatures),
       created :: UTCTime,
       parent :: Maybe BlockId,
       transactions :: Map TransactionId SignedTransaction
