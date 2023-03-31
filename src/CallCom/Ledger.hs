@@ -17,8 +17,8 @@ import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey),
 import CallCom.Types.Commodity (CommodityId)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
 import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState))
-import CallCom.Types.Positions (Positions, subtractPositions)
-import CallCom.Types.Transaction (TransactionId, Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
+import CallCom.Types.Positions (Positions (Positions), subtractPositions)
+import CallCom.Types.Transaction (TransactionId, Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (Creation, Deletion, Transfer, Issuance, Cancellation, ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
 import CallCom.User (getUserId)
 import Control.Lens ((^.), (.~), (<&>))
@@ -536,21 +536,117 @@ getUser s uid =
     (Map.lookup uid (s ^. #users))
 
 
--- Verify that there is no spending from a zero balance or
+getUserPositions ::
+  LedgerState ->
+  UserId ->
+  Either ErrorMessage Positions
+getUserPositions s uid =
+  maybe
+    (Left (ErrorMessage "getUserPositions: not found"))
+    pure
+    (Map.lookup uid (s ^. #positions))
+
+
+-- Verify that there is no spending from a nonexistent balance or
 -- spending of a commodity which was not previously declared
 -- to exist.
 verifyTransactionInputsExist ::
   LedgerState ->
   Transaction ->
   Either ErrorMessage ()
-verifyTransactionInputsExist = todo
-
+verifyTransactionInputsExist s0 t =
+  forM_ (Map.toList (t ^. #inputs . #unTransactionInputs))
+    $ \(uid, inPs) -> do
+      uPs <- getUserPositions s0 uid
+      let spotDiff = Map.differenceWith
+                     (curry (pure . uncurry Set.difference))
+                     (inPs ^. #spot)
+                     (uPs ^. #spot)
+      bool
+        (pure ())
+        (Left . ErrorMessage $
+          "spot input does not exist: " <> pack (show spotDiff))
+        (null spotDiff)
+      let debits = Map.keysSet (inPs ^. #debits)
+                   `Set.difference`
+                   Map.keysSet (uPs ^. #debits)
+      bool
+        (pure ())
+        (Left . ErrorMessage $
+          "debit balance does not exist: " <> pack (show debits))
+        (null debits)
+      let credits = Map.keysSet (inPs ^. #credits)
+                    `Set.difference`
+                    Map.keysSet (uPs ^. #credits)
+      bool
+        (pure ())
+        (Left . ErrorMessage $
+          "credit balance does not exist: " <> pack (show credits))
+        (null credits)
+  
 
 -- Verify that the transaction conserves value, if it is a transfer, issuance, or cancellation.
 verifyTransactionBalances ::
   Transaction  ->
   Either ErrorMessage ()
-verifyTransactionBalances = todo
+verifyTransactionBalances t =
+  case t ^. #purpose of
+    Creation -> pure ()
+    Deletion -> pure ()
+    ChangePublicKeyOfTo {} -> pure ()
+    Issuance -> verifyIssuanceTransactionBalances t
+    Cancellation -> verifyCancellationTransactionBalances t
+    Transfer -> verifyTransferTransactionBalances t
+
+
+verifyIssuanceTransactionBalances ::
+  Transaction ->
+  Either ErrorMessage ()
+verifyIssuanceTransactionBalances t =
+  bool
+    (pure ())
+    (Left . ErrorMessage $ "transaction does not balance: "
+      <> pack (show t))
+    ((t ^. #inputs . #unTransactionInputs) ==
+      (cancelCreditsAndDebits <$>
+        (t ^. #outputs . #unTransactionOutputs)))
+
+
+cancelCreditsAndDebits :: Positions -> Positions
+cancelCreditsAndDebits ps =
+  Positions
+    (ps ^. #spot)
+    (Map.differenceWith (curry (pure . uncurry (-)))
+      (ps ^. #debits)
+      (ps ^. #credits))
+    (Map.differenceWith (curry (pure . uncurry (-)))
+      (ps ^. #credits)
+      (ps ^. #debits))
+
+
+verifyCancellationTransactionBalances ::
+  Transaction ->
+  Either ErrorMessage ()
+verifyCancellationTransactionBalances t =
+  bool
+    (pure ())
+    (Left . ErrorMessage $ "transaction does not balance: "
+      <> pack (show t))
+    ((t ^. #outputs . #unTransactionOutputs) ==
+      (cancelCreditsAndDebits <$>
+        (t ^. #inputs . #unTransactionInputs)))
+
+
+verifyTransferTransactionBalances ::
+  Transaction ->
+  Either ErrorMessage ()
+verifyTransferTransactionBalances t =
+  bool
+    (pure ())
+    (Left . ErrorMessage $ "transaction does not balance: "
+      <> pack (show t))
+    (mconcat (Map.elems (t ^. #inputs . #unTransactionInputs))
+      == mconcat (Map.elems (t ^. #outputs . #unTransactionOutputs)))
 
 
 -- Verify that the content of the transaction is
@@ -558,8 +654,72 @@ verifyTransactionBalances = todo
 verifyTransactionPurpose ::
   Transaction ->
   Either ErrorMessage ()
-verifyTransactionPurpose = todo
-
-
-todo :: a
-todo = todo
+verifyTransactionPurpose t =
+  case t ^. #purpose of
+    ChangePublicKeyOfTo {} ->
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to change public key contains inputs or outputs: "
+          <> pack (show t))
+        (t ^. #inputs == mempty && t ^. #outputs == mempty)
+    Creation {} -> do
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to create assets contains inputs: "
+          <> pack (show t))
+        (t ^. #inputs == mempty)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to create assets contains debit outputs: "
+          <> pack (show t))
+        (all ((== mempty) . (^. #debits))
+          (Map.elems (t ^. #outputs . #unTransactionOutputs)))
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to create assets contains credit outputs: "
+          <> pack (show t))
+        (all ((== mempty) . (^. #credits))
+          (Map.elems (t ^. #outputs . #unTransactionOutputs)))
+    Deletion {} -> do
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to delete assets contains outputs: "
+          <> pack (show t))
+        (t ^. #outputs == mempty)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to delete assets contains credit inputs: "
+          <> pack (show t))
+        (all ((== mempty) . (^. #credits))
+          (Map.elems (t ^. #inputs . #unTransactionInputs)))
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "transaction to delete assets contains debit inputs: "
+          <> pack (show t))
+        (all ((== mempty) . (^. #debits))
+          (Map.elems (t ^. #inputs . #unTransactionInputs)))
+    Issuance -> do
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "issuance transaction contains inputs: "
+          <> pack (show t))
+        (t ^. #inputs == mempty)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "issuance transaction contains spot outputs: "
+          <> pack (show t))
+        (all ((== mempty) . (^. #spot))
+          (Map.elems (t ^. #outputs . #unTransactionOutputs)))
+    Cancellation -> do
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "cancellation transaction contains outputs: "
+          <> pack (show t))
+        (t ^. #outputs == mempty)
+      bool
+        (pure ())
+        (Left . ErrorMessage $ "cancellation transaction contains spot inputs: "
+           <> pack (show t))
+        (all ((== mempty) . (^. #spot))
+          (Map.elems (t ^. #outputs . #unTransactionOutputs)))
+    Transfer {} -> pure ()

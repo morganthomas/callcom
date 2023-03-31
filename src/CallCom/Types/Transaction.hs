@@ -4,7 +4,7 @@
 
 module CallCom.Types.Transaction
   ( Transaction (Transaction),
-    TransactionPurpose (Creation, Transfer, Deletion, ChangePublicKeyOfTo),
+    TransactionPurpose (Creation, Deletion, Issuance, Transfer, Cancellation, ChangePublicKeyOfTo),
     TransactionId (TransactionId),
     TransactionInputs (TransactionInputs),
     TransactionOutputs (TransactionOutputs),
@@ -67,14 +67,14 @@ newtype TransactionInputs =
   TransactionInputs
     { unTransactionInputs :: Map UserId Positions
     }
-  deriving (Generic, Show, Serialise)
+  deriving (Eq, Semigroup, Monoid, Generic, Show, Serialise)
 
 
 newtype TransactionOutputs =
   TransactionOutputs
     { unTransactionOutputs :: Map UserId Positions
     }
-  deriving (Generic, Show, Serialise)
+  deriving (Eq, Semigroup, Monoid, Generic, Show, Serialise)
 
 
 newtype Signatures =
