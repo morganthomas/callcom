@@ -460,6 +460,7 @@ verifyTransaction s0 st@(SignedTransaction t _) = do
   verifyTransactionInputsExist s0 t
   verifyTransactionBalances t
   verifyTransactionPurpose t
+  verifyCommodityIds t
 
 
 -- Check that all signatures are valid.
@@ -723,3 +724,15 @@ verifyTransactionPurpose t =
         (all ((== mempty) . (^. #spot))
           (Map.elems (t ^. #outputs . #unTransactionOutputs)))
     Transfer {} -> pure ()
+
+
+-- Verifies that each commodity introduced has
+-- the proper commodity id.
+verifyCommodityIds ::
+  Transaction ->
+  Either ErrorMessage ()
+verifyCommodityIds = todo
+
+
+todo :: a
+todo = todo
