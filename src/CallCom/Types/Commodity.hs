@@ -16,6 +16,7 @@ import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Text (Text)
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
 
@@ -24,6 +25,7 @@ data Commodity =
     { id :: CommodityId,
       types :: Set CommodityTypeId,
       description :: Maybe CommodityDescription,
+      created :: UTCTime,
       owner :: UserId
     }
   deriving (Eq, Ord, Generic, Show)

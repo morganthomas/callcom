@@ -11,6 +11,7 @@ module CallCom.Ledger
 
 
 import CallCom.Auth (verifySignature)
+import CallCom.Commodity (getCommodityId)
 import CallCom.CommodityType (getCommodityTypeId)
 import CallCom.TokenIssue (getTokenIssueId)
 import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey), Signature)
@@ -731,8 +732,19 @@ verifyTransactionPurpose t =
 verifyCommodityIds ::
   Transaction ->
   Either ErrorMessage ()
-verifyCommodityIds = todo
-
-
-todo :: a
-todo = todo
+verifyCommodityIds t =
+  forM_ (t ^. #outputs . #unTransactionOutputs) $
+    \ps ->
+      forM_ (ps ^. #spot) $
+        \coms ->
+          forM_ coms $ \com ->
+            bool
+              (pure ())
+              (Left . ErrorMessage $ "commodity id is wrong: "
+                <> pack (show com))
+              ((com ^. #id) ==
+                getCommodityId
+                  (com ^. #types)
+                  (com ^. #description)
+                  (com ^. #created)
+                  (com ^. #owner))

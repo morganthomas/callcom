@@ -9,6 +9,7 @@ maintainer:    morgan.a.s.thomas@gmail.com
 library
   exposed-modules:
     CallCom.Auth
+    CallCom.Commodity
     CallCom.CommodityType
     CallCom.Ledger
     CallCom.TokenIssue
