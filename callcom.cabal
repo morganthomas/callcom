@@ -11,6 +11,7 @@ library
     CallCom.Auth
     CallCom.Commodity
     CallCom.CommodityType
+    CallCom.DB
     CallCom.Ledger
     CallCom.TokenIssue
     CallCom.Types.Auth
@@ -49,6 +50,7 @@ library
     numeric-prelude,
     optparse-applicative,
     parsec,
+    postgresql-simple,
     process,
     QuickCheck,
     random,
