@@ -15,6 +15,7 @@ import CallCom.Types.User (UserId)
 import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Set (Set)
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 
 
@@ -22,6 +23,7 @@ data TokenIssue =
   TokenIssue
     { underlying :: CommodityTypeId,
       fraction :: TokenFraction,
+      created :: UTCTime,
       issuers :: Set UserId,
       circulation :: TokenBalance
     }
