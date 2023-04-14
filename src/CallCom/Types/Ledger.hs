@@ -22,6 +22,7 @@ import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple.FromField (FromField)
+import Database.PostgreSQL.Simple.ToField (ToField)
 import GHC.Generics (Generic)
 
 
@@ -37,7 +38,7 @@ data LedgerState =
 
 newtype LedgerInception =
   LedgerInception { unLedgerInception :: UTCTime }
-  deriving (Generic, Show, FromField)
+  deriving (Generic, Show, FromField, ToField)
 
 
 data Ledger =
@@ -56,7 +57,7 @@ newtype BlockId =
   BlockId
     { unBlockId :: ByteString
     }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, ToField, FromField)
 
 
 data Block =

@@ -434,7 +434,7 @@ addSpotInputsToConsumersMap ::
 addSpotInputsToConsumersMap m t =
   foldM (addSpotInputToConsumersMap (t ^. #unsigned . #id)) m
     (concat (Map.elems (t ^. #unsigned . #inputs . #unTransactionInputs)
-      <&> concatMap (fmap (^. #id) . Set.toList) . Map.elems . (^. #spot)))
+      <&> fmap (^. #id) . Set.toList . (^. #spot)))
 
 
 addSpotInputToConsumersMap ::
@@ -559,10 +559,7 @@ verifyTransactionInputsExist s0 t =
   forM_ (Map.toList (t ^. #inputs . #unTransactionInputs))
     $ \(uid, inPs) -> do
       uPs <- getUserPositions s0 uid
-      let spotDiff = Map.differenceWith
-                     (curry (pure . uncurry Set.difference))
-                     (inPs ^. #spot)
-                     (uPs ^. #spot)
+      let spotDiff = (inPs ^. #spot) `Set.difference` (uPs ^. #spot)
       bool
         (pure ())
         (Left . ErrorMessage $
@@ -735,15 +732,14 @@ verifyCommodityIds t =
   forM_ (t ^. #outputs . #unTransactionOutputs) $
     \ps ->
       forM_ (ps ^. #spot) $
-        \coms ->
-          forM_ coms $ \com ->
-            bool
-              (pure ())
-              (Left . ErrorMessage $ "commodity id is wrong: "
-                <> pack (show com))
-              ((com ^. #id) ==
-                getCommodityId
-                  (com ^. #types)
-                  (com ^. #description)
-                  (com ^. #created)
-                  (com ^. #owner))
+        \com ->
+          bool
+            (pure ())
+            (Left . ErrorMessage $ "commodity id is wrong: "
+              <> pack (show com))
+            ((com ^. #id) ==
+              getCommodityId
+                (com ^. #types)
+                (com ^. #description)
+                (com ^. #created)
+                (com ^. #owner))

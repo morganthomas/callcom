@@ -3,7 +3,7 @@
 
 
 module CallCom.Types.HasLedgerStore
-  ( HasLedgerStore (getLedgerState, getLedgerTip, getBlock, putBlock),
+  ( HasLedgerStore (getLedgerState, getLedgerTip, getLedgerInception, getBlock, putLedgerInception, putBlock),
     getLedger
   ) where
 
@@ -17,18 +17,18 @@ import qualified Data.Map as Map
 
 class HasLedgerStore m where
   getLedgerState :: m LedgerState
-  getLedgerInception :: m LedgerInception
-  getLedgerTip :: m (Maybe BlockId)
+  getLedgerInception :: m [LedgerInception]
+  getLedgerTip :: LedgerInception -> m (Maybe BlockId)
   getBlock :: BlockId -> m (Maybe Block)
+  putLedgerInception :: LedgerInception -> m ()
   putBlock :: Block -> m ()
 
 
 getLedger
   :: ( Monad m, HasLedgerStore m )
-  => m Ledger
-getLedger = do
-  tipm <- getLedgerTip
-  t0 <- getLedgerInception
+  => LedgerInception -> m Ledger
+getLedger t0 = do
+  tipm <- getLedgerTip t0
   case tipm of
     Nothing -> pure (EmptyLedger t0)
     Just tip -> Ledger t0 tip <$> getBlocks tip
