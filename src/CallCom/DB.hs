@@ -2,13 +2,15 @@
 
 
 module CallCom.DB
-  ( migrate
+  ( migrate,
+    getLedgerInception
   ) where
 
 
+import CallCom.Types.Ledger (LedgerInception)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import Database.PostgreSQL.Simple (Query, Connection, execute_)
+import Database.PostgreSQL.Simple (Query, Connection, Only (fromOnly), execute_, query)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 
 
@@ -257,4 +259,14 @@ migrateQuery =
         FOREIGN KEY(resulting_state)
           REFERENCES resulting_state(id)
     );
+  |]
+
+getLedgerInception :: MonadIO m => Connection -> m [LedgerInception]
+getLedgerInception conn =
+  liftIO $ fmap fromOnly <$> query conn getLedgerInceptionQuery ()
+
+getLedgerInceptionQuery :: Query
+getLedgerInceptionQuery =
+  [sql|
+    SELECT ledger_inception FROM ledger;
   |]

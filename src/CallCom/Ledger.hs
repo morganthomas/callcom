@@ -17,7 +17,7 @@ import CallCom.TokenIssue (getTokenIssueId)
 import CallCom.Types.Auth (UserPublicKey (UserPublicKey), PublicKey (PublicKey), Signature)
 import CallCom.Types.Commodity (CommodityId)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
-import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState))
+import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions), subtractPositions)
 import CallCom.Types.Transaction (TransactionId, Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (Creation, Deletion, Transfer, Issuance, Cancellation, ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
@@ -30,7 +30,6 @@ import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (pack)
-import Data.Time (UTCTime)
 
 
 -- Verifies that the given ledger is valid. If it is valid,
@@ -69,7 +68,7 @@ verifyLedger l = do
     initial = initialLedgerState (l ^. #created)
 
 
-initialLedgerState :: UTCTime -> LedgerState
+initialLedgerState :: LedgerInception -> LedgerState
 initialLedgerState t0 =
   LedgerState
     mempty
@@ -77,13 +76,13 @@ initialLedgerState t0 =
     (Map.singleton initUserId initUser)
     mempty
   where
-    initUserId = getUserId initUserName t0
+    initUserId = getUserId initUserName (t0 ^. #unLedgerInception)
     initUserName = UserName "morgan.thomas"
     initUser =
       User initUserId
         (UserName "morgan.thomas")
         Nothing
-        t0
+        (t0 ^. #unLedgerInception)
         (UserPublicKey (PublicKey "r\GS#qT\205i\189\228$\233\129\158\131\227\220\170i~\228[\229N\155\128\191:2\a \208X"))
 
 

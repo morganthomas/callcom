@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 
 module CallCom.Types.Ledger
   ( LedgerState (LedgerState),
+    LedgerInception (LedgerInception),
     Ledger (EmptyLedger, Ledger),
     BlockId (BlockId),
     Block (Block)
@@ -19,6 +21,7 @@ import CallCom.Types.User (UserId, User)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Time (UTCTime)
+import Database.PostgreSQL.Simple.FromField (FromField)
 import GHC.Generics (Generic)
 
 
@@ -32,12 +35,17 @@ data LedgerState =
   deriving (Generic, Show)
 
 
+newtype LedgerInception =
+  LedgerInception { unLedgerInception :: UTCTime }
+  deriving (Generic, Show, FromField)
+
+
 data Ledger =
     EmptyLedger
-    { created :: UTCTime
+    { created :: LedgerInception
     }
   | Ledger
-    { created :: UTCTime,
+    { created :: LedgerInception,
       tip :: BlockId,
       blocks :: Map BlockId Block
     }
