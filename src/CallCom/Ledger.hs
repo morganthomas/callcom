@@ -19,6 +19,7 @@ import CallCom.Types.Commodity (CommodityId)
 import CallCom.Types.ErrorMessage (ErrorMessage (ErrorMessage))
 import CallCom.Types.Ledger (BlockId, Block, Ledger (EmptyLedger, Ledger), LedgerState (LedgerState), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions), subtractPositions)
+import CallCom.Types.TokenBalance (TokenDebitBalance (TokenDebitBalance), TokenCreditBalance (TokenCreditBalance))
 import CallCom.Types.Transaction (TransactionId, Transaction, SignedTransaction (SignedTransaction), TransactionPurpose (Creation, Deletion, Transfer, Issuance, Cancellation, ChangePublicKeyOfTo), TransactionInputs, TransactionOutputs (TransactionOutputs))
 import CallCom.Types.User (User (User), UserName (UserName), UserId)
 import CallCom.User (getUserId)
@@ -614,12 +615,12 @@ cancelCreditsAndDebits :: Positions -> Positions
 cancelCreditsAndDebits ps =
   Positions
     (ps ^. #spot)
-    (Map.differenceWith (curry (pure . uncurry (-)))
-      (ps ^. #debits)
-      (ps ^. #credits))
-    (Map.differenceWith (curry (pure . uncurry (-)))
-      (ps ^. #credits)
-      (ps ^. #debits))
+    (TokenDebitBalance <$> Map.differenceWith (curry (pure . uncurry (-)))
+      ((^. #unTokenDebitBalance) <$> (ps ^. #debits))
+      ((^. #unTokenCreditBalance) <$> (ps ^. #credits)))
+    (TokenCreditBalance <$> Map.differenceWith (curry (pure . uncurry (-)))
+      ((^. #unTokenCreditBalance) <$> (ps ^. #credits))
+      ((^. #unTokenDebitBalance) <$> (ps ^. #debits)))
 
 
 verifyCancellationTransactionBalances ::

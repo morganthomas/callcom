@@ -10,7 +10,7 @@ module CallCom.Types.Positions
 
 
 import CallCom.Types.Commodity (Commodity)
-import CallCom.Types.TokenBalance (TokenBalance)
+import CallCom.Types.TokenBalance (TokenCreditBalance, TokenDebitBalance)
 import CallCom.Types.TokenIssue (TokenIssueId)
 import Codec.Serialise (Serialise)
 import Control.Lens ((^.))
@@ -25,8 +25,8 @@ import GHC.Generics (Generic)
 data Positions =
   Positions
     { spot :: Set Commodity,
-      debits :: Map TokenIssueId TokenBalance, -- value owed to the position holder
-      credits :: Map TokenIssueId TokenBalance -- value owed by the position holder
+      debits :: Map TokenIssueId TokenDebitBalance, -- value owed to the position holder
+      credits :: Map TokenIssueId TokenCreditBalance -- value owed by the position holder
     }
   deriving (Eq, Generic, Show)
 
