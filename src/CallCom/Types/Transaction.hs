@@ -17,9 +17,12 @@ import CallCom.Types.Auth (Signature, UserPublicKey)
 import CallCom.Types.Positions (Positions)
 import CallCom.Types.User (UserId)
 import Codec.Serialise (Serialise)
+import Data.Aeson (FromJSON)
 import Data.ByteString (ByteString)
 import Data.Map (Map)
 import Data.Time.Clock (UTCTime)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField), fromJSONField)
+import Database.PostgreSQL.Simple.ToField (ToField)
 import GHC.Generics (Generic)
 
 
@@ -48,7 +51,7 @@ newtype TransactionId =
   TransactionId
     { unTransactionId :: ByteString
     }
-  deriving (Generic, Show, Serialise)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField, ToField)
 
 
 data TransactionPurpose =
@@ -61,6 +64,11 @@ data TransactionPurpose =
   deriving (Generic, Show)
 
 instance Serialise TransactionPurpose
+
+instance FromJSON TransactionPurpose
+
+instance FromField TransactionPurpose where
+  fromField = fromJSONField
 
 
 newtype TransactionInputs =

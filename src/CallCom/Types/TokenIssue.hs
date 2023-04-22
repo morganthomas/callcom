@@ -16,6 +16,8 @@ import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Set (Set)
 import Data.Time (UTCTime)
+import Database.PostgreSQL.Simple.FromField (FromField)
+import Database.PostgreSQL.Simple.ToField (ToField)
 import GHC.Generics (Generic)
 
 
@@ -35,11 +37,11 @@ instance Serialise TokenIssue
 newtype TokenIssueId =
   TokenIssueId
     { unTokenIssueId :: ByteString }
-  deriving (Eq, Ord, Generic, Show, Serialise)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField, ToField)
 
 
 -- The number of tokens per unit of underlying asset
 newtype TokenFraction =
   TokenFraction
     { unTokenFraction :: Int }
-  deriving (Eq, Ord, Generic, Show, Serialise)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField)

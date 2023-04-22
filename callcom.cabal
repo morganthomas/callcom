@@ -12,6 +12,7 @@ library
     CallCom.Commodity
     CallCom.CommodityType
     CallCom.DB
+    CallCom.JSON
     CallCom.Ledger
     CallCom.TokenIssue
     CallCom.Types.Auth
@@ -30,6 +31,7 @@ library
   build-depends:
     base >= 4.9 && < 5,
     aeson,
+    base64,
     basement,
     bytestring,
     containers,

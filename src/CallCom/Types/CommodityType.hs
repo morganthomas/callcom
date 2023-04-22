@@ -14,6 +14,7 @@ import Codec.Serialise (Serialise)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Time (UTCTime)
+import Database.PostgreSQL.Simple.FromField (FromField)
 import GHC.Generics (Generic)
 
 
@@ -31,10 +32,10 @@ instance Serialise CommodityType
 newtype CommodityTypeId =
   CommodityTypeId
     { unCommodityTypeId :: ByteString }
-  deriving (Eq, Ord, Generic, Show, Serialise)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField)
 
 
 newtype CommodityTypeName =
   CommodityTypeName
     { unCommodityTypeName :: Text }
-  deriving (Eq, Ord, Generic, Show, Serialise)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField)

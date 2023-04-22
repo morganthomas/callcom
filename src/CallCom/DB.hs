@@ -1,5 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 
 module CallCom.DB
@@ -9,10 +10,11 @@ module CallCom.DB
   ) where
 
 
-import CallCom.Types.Commodity (Commodity)
+import CallCom.JSON (base64Parser, base64ToJSON)
+import CallCom.Types.Commodity (Commodity, CommodityId)
 import CallCom.Types.CommodityType (CommodityType (CommodityType))
 import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
-import CallCom.Types.Positions (Positions)
+import CallCom.Types.Positions (Positions (Positions))
 import CallCom.Types.TokenIssue (TokenIssue (TokenIssue))
 import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction))
 import CallCom.Types.User (User (User))
@@ -20,12 +22,29 @@ import Control.Monad (void, forM)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
+import Crypto.Sign.Ed25519 (Signature (Signature, unSignature))
+import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.ByteString (ByteString)
 import qualified Data.Map as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Set as Set
 import Database.PostgreSQL.Simple (Query, Connection, Only (Only, fromOnly), execute_, query)
+import Database.PostgreSQL.Simple.FromField (FromField (fromField), fromJSONField)
+import Database.PostgreSQL.Simple.ToField (ToField (toField), toJSONField)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
+
+
+instance FromField Signature where
+  fromField = fromJSONField
+
+instance ToField Signature where
+  toField = toJSONField
+
+instance FromJSON Signature where
+  parseJSON = fmap Signature . base64Parser
+
+instance ToJSON Signature where
+  toJSON = base64ToJSON . unSignature
 
 
 migrate :: MonadIO m => Connection -> m ()
@@ -297,7 +316,8 @@ getLedgerTipQuery =
 
 getBlock :: MonadIO m => Connection -> BlockId -> m (Maybe Block)
 getBlock conn bId = runMaybeT $ do
-  (bCreated, bParent) <- MaybeT . liftIO $ listToMaybe <$> query conn getBlockQuery (Only bId)
+  (bCreated, bParent) <- MaybeT . liftIO $
+    listToMaybe <$> query conn getBlockQuery (Only bId)
   uRows <- lift . liftIO $ query conn getBlockNewUsersQuery (Only bId)
   let newUsers = Map.fromList
         [ (uid, (User uid nm ref t pk, sig))
@@ -312,7 +332,7 @@ getBlock conn bId = runMaybeT $ do
   newTokenIssues <- fmap Map.fromList . forM tiRows
     $ \(tiId, t, underlying, frac) -> do
       issuerRows <- lift . liftIO $ query conn getTokenIssuersQuery (Only tiId)
-      pure $ (tiId, (TokenIssue underlying frac t (Set.fromList (fst <$> issuerRows)),
+      pure $ (tiId, (TokenIssue underlying frac t (Set.fromList (fst <$> issuerRows)) 0,
                       Signatures (Map.fromList issuerRows)))
   txRows <- lift . liftIO $ query conn getBlockTransactionsQuery (Only bId)
   newTransactions <- fmap Map.fromList . forM txRows
@@ -326,23 +346,32 @@ getBlock conn bId = runMaybeT $ do
         $ \(owner, posId) ->
           (owner,) <$> getPositions conn posId
       sigs <- lift . liftIO $ query conn getTxSignaturesQuery (Only txId)
-      pure (SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
+      pure (txId, SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
   pure (Block newCommodityTypes newTokenIssues newUsers bCreated bParent newTransactions)
 
 
 newtype PositionId = PositionId { unPositionId :: ByteString }
 
+instance FromField PositionId where
+  fromField = fromJSONField
 
-newtype CommodityId = CommodityId { unCommodityId :: ByteString }
+instance FromJSON PositionId where
+  parseJSON = fmap PositionId . base64Parser
+
+instance ToField PositionId where
+  toField = toJSONField
+
+instance ToJSON PositionId where
+  toJSON = base64ToJSON . unPositionId
 
 
 getPositions :: MonadIO m => Connection -> PositionId -> m Positions
 getPositions conn posId = do
-  spotRows <- lift . liftIO $ query conn getSpotPositionsQuery (Only posId)
+  spotRows <- fmap fromOnly <$> liftIO (query conn getSpotPositionsQuery (Only posId))
   spotPosition <- Set.fromList <$> forM spotRows (getCommodity conn)
-  debitPosition <- lift . liftIO
+  debitPosition <- liftIO
     $ Map.fromList <$> query conn getDebitPositionsQuery (Only posId)
-  creditPosition <- lift . liftIO
+  creditPosition <- liftIO
     $ Map.fromList <$> query conn getCreditPositionsQuery (Only posId)
   pure (Positions spotPosition debitPosition creditPosition)
 
