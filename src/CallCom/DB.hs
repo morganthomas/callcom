@@ -10,9 +10,13 @@ module CallCom.DB
 
 
 import CallCom.Types.Commodity (Commodity)
-import CallCom.Types.Ledger (BlockId, Block, LedgerInception)
+import CallCom.Types.CommodityType (CommodityType (CommodityType))
+import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
 import CallCom.Types.Positions (Positions)
-import Control.Monad (void)
+import CallCom.Types.TokenIssue (TokenIssue (TokenIssue))
+import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction))
+import CallCom.Types.User (User (User))
+import Control.Monad (void, forM)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
@@ -294,7 +298,7 @@ getLedgerTipQuery =
 getBlock :: MonadIO m => Connection -> BlockId -> m (Maybe Block)
 getBlock conn bId = runMaybeT $ do
   (bCreated, bParent) <- MaybeT . liftIO $ listToMaybe <$> query conn getBlockQuery (Only bId)
-  uRows <- lift . liftIO $ query conn getBlockNewUsers (Only bId)
+  uRows <- lift . liftIO $ query conn getBlockNewUsersQuery (Only bId)
   let newUsers = Map.fromList
         [ (uid, (User uid nm ref t pk, sig))
           | (uid, nm, ref, sig, t, pk) <- uRows
@@ -308,15 +312,22 @@ getBlock conn bId = runMaybeT $ do
   newTokenIssues <- fmap Map.fromList . forM tiRows
     $ \(tiId, t, underlying, frac) -> do
       issuerRows <- lift . liftIO $ query conn getTokenIssuersQuery (Only tiId)
-      pure $ (tiId, (TokenIssue underlying frac t (fst <$> issuerRows),
+      pure $ (tiId, (TokenIssue underlying frac t (Set.fromList (fst <$> issuerRows)),
                       Signatures (Map.fromList issuerRows)))
   txRows <- lift . liftIO $ query conn getBlockTransactionsQuery (Only bId)
   newTransactions <- fmap Map.fromList . forM txRows
     $ \(txId, purpose, t) -> do
       inRows <- lift . liftIO $ query conn getTxInputsQuery (Only txId)
+      outRows <- lift . liftIO $ query conn getTxOutputsQuery (Only txId)
       inputs <- fmap (TransactionInputs . Map.fromList) . forM inRows
         $ \(owner, posId) ->
           (owner,) <$> getPositions conn posId
+      outputs <- fmap (TransactionOutputs . Map.fromList) . forM outRows
+        $ \(owner, posId) ->
+          (owner,) <$> getPositions conn posId
+      sigs <- lift . liftIO $ query conn getTxSignaturesQuery (Only txId)
+      pure (SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
+  pure (Block newCommodityTypes newTokenIssues newUsers bCreated bParent newTransactions)
 
 
 newtype PositionId = PositionId { unPositionId :: ByteString }
@@ -383,6 +394,18 @@ getTxInputsQuery :: Query
 getTxInputsQuery =
   [sql|
     SELECT owner, position FROM transaction_input WHERE transaction = ?
+  |]
+
+getTxOutputsQuery :: Query
+getTxOutputsQuery =
+  [sql|
+    SELECT owner, position FROM transaction_output WHERE transaction = ?
+  |]
+
+getTxSignaturesQuery :: Query
+getTxSignaturesQuery =
+  [sql|
+    SELECT signer, signature FROM transaction_signature WHERE transaction = ?
   |]
 
 getSpotPositionsQuery :: Query
