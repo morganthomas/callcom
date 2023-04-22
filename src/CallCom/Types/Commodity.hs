@@ -30,7 +30,7 @@ data Commodity =
       types :: Set CommodityTypeId,
       description :: Maybe CommodityDescription,
       created :: UTCTime,
-      owner :: UserId
+      creator :: UserId
     }
   deriving (Eq, Ord, Generic, Show)
 

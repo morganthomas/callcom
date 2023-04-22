@@ -6,12 +6,13 @@
 module CallCom.DB
   ( migrate,
     getLedgerInception,
-    getLedgerTip
+    getLedgerTip,
+    getBlock
   ) where
 
 
 import CallCom.JSON (base64Parser, base64ToJSON)
-import CallCom.Types.Commodity (Commodity, CommodityId)
+import CallCom.Types.Commodity (Commodity (Commodity), CommodityId, CommodityDescription (CommodityDescription))
 import CallCom.Types.CommodityType (CommodityType (CommodityType))
 import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions))
@@ -26,7 +27,7 @@ import Crypto.Sign.Ed25519 (Signature (Signature, unSignature))
 import Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON))
 import Data.ByteString (ByteString)
 import qualified Data.Map as Map
-import Data.Maybe (listToMaybe)
+import Data.Maybe (catMaybes, listToMaybe)
 import qualified Data.Set as Set
 import Database.PostgreSQL.Simple (Query, Connection, Only (Only, fromOnly), execute_, query)
 import Database.PostgreSQL.Simple.FromField (FromField (fromField), fromJSONField)
@@ -142,6 +143,7 @@ migrateQuery =
       id BYTEA PRIMARY KEY,
       created_time TIMESTAMPTZ NOT NULL,
       created_transaction BYTEA NOT NULL,
+      creator BYTEA NOT NULL,
       FOREIGN KEY fk_created_transaction
         FOREIGN KEY(created_transaction)
           REFERENCES transaction(id)
@@ -368,7 +370,7 @@ instance ToJSON PositionId where
 getPositions :: MonadIO m => Connection -> PositionId -> m Positions
 getPositions conn posId = do
   spotRows <- fmap fromOnly <$> liftIO (query conn getSpotPositionsQuery (Only posId))
-  spotPosition <- Set.fromList <$> forM spotRows (getCommodity conn)
+  spotPosition <- Set.fromList . catMaybes <$> forM spotRows (getCommodity conn)
   debitPosition <- liftIO
     $ Map.fromList <$> query conn getDebitPositionsQuery (Only posId)
   creditPosition <- liftIO
@@ -376,8 +378,36 @@ getPositions conn posId = do
   pure (Positions spotPosition debitPosition creditPosition)
 
 
-getCommodity :: MonadIO m => Connection -> CommodityId -> m Commodity
-getCommodity = todo
+getCommodity :: MonadIO m => Connection -> CommodityId -> m (Maybe Commodity)
+getCommodity conn cmId = runMaybeT $ do
+  (t, creator) <- MaybeT . liftIO $ listToMaybe
+    <$> query conn getCommodityQuery (Only cmId)
+  desc <- lift . liftIO $ Map.fromList
+    <$> query conn getCommodityDescriptionQuery (Only cmId)
+  types <- lift . liftIO $ Set.fromList . fmap fromOnly
+    <$> query conn getCommodityTypesQuery (Only cmId)
+  pure (Commodity cmId types (CommodityDescription <$> (if null desc then Nothing else Just desc)) t creator)
+
+
+getCommodityQuery :: Query
+getCommodityQuery =
+  [sql|
+    SELECT created_time, created_transaction FROM commodity WHERE id = ?
+  |]
+
+
+getCommodityDescriptionQuery :: Query
+getCommodityDescriptionQuery =
+  [sql|
+    SELECT key, value FROM commodity_description WERE commodity = ?
+  |]
+
+
+getCommodityTypesQuery :: Query
+getCommodityTypesQuery =
+  [sql|
+    SELECT commodity_type FROM commodity_has_type WHERE commodity = ?
+  |]
 
 
 getBlockQuery :: Query
@@ -454,7 +484,3 @@ getCreditPositionsQuery =
   [sql|
     SELECT issue, balance FROM credit_position WHERE position = ?
   |]
-
-
-todo :: a
-todo = error "todo"

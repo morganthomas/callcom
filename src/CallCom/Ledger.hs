@@ -743,4 +743,4 @@ verifyCommodityIds t =
                 (com ^. #types)
                 (com ^. #description)
                 (com ^. #created)
-                (com ^. #owner))
+                (com ^. #creator))
