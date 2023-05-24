@@ -7,7 +7,8 @@ module CallCom.DB
   ( migrate,
     getLedgerInception,
     getLedgerTip,
-    getBlock
+    getBlock,
+    getTransaction
   ) where
 
 
@@ -17,7 +18,7 @@ import CallCom.Types.CommodityType (CommodityType (CommodityType))
 import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions))
 import CallCom.Types.TokenIssue (TokenIssue (TokenIssue))
-import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction))
+import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction), TransactionId, TransactionPurpose)
 import CallCom.Types.User (User (User))
 import Control.Monad (void, forM)
 import Control.Monad.IO.Class (MonadIO (liftIO))
@@ -29,6 +30,7 @@ import Data.ByteString (ByteString)
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes, listToMaybe)
 import qualified Data.Set as Set
+import Data.Time.Clock (UTCTime)
 import Database.PostgreSQL.Simple (Query, Connection, Only (Only, fromOnly), execute_, query)
 import Database.PostgreSQL.Simple.FromField (FromField (fromField), fromJSONField)
 import Database.PostgreSQL.Simple.ToField (ToField (toField), toJSONField)
@@ -338,18 +340,30 @@ getBlock conn bId = runMaybeT $ do
                       Signatures (Map.fromList issuerRows)))
   txRows <- lift . liftIO $ query conn getBlockTransactionsQuery (Only bId)
   newTransactions <- fmap Map.fromList . forM txRows
-    $ \(txId, purpose, t) -> do
-      inRows <- lift . liftIO $ query conn getTxInputsQuery (Only txId)
-      outRows <- lift . liftIO $ query conn getTxOutputsQuery (Only txId)
-      inputs <- fmap (TransactionInputs . Map.fromList) . forM inRows
-        $ \(owner, posId) ->
-          (owner,) <$> getPositions conn posId
-      outputs <- fmap (TransactionOutputs . Map.fromList) . forM outRows
-        $ \(owner, posId) ->
-          (owner,) <$> getPositions conn posId
-      sigs <- lift . liftIO $ query conn getTxSignaturesQuery (Only txId)
-      pure (txId, SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
+    $ getTxRowTransaction conn
   pure (Block newCommodityTypes newTokenIssues newUsers bCreated bParent newTransactions)
+
+
+getTransaction :: MonadIO m => Connection -> TransactionId -> m (Maybe SignedTransaction)
+getTransaction conn txId = runMaybeT $ do
+  txRow <- MaybeT . fmap listToMaybe . liftIO
+    $ query conn getTransactionQuery (Only txId)
+  snd <$> getTxRowTransaction conn txRow
+
+
+getTxRowTransaction :: MonadIO m => Connection -> (TransactionId, TransactionPurpose, UTCTime) -> MaybeT m (TransactionId, SignedTransaction)
+getTxRowTransaction conn (txId, purpose, t) = do
+  inRows <- lift . liftIO $ query conn getTxInputsQuery (Only txId)
+  outRows <- lift . liftIO $ query conn getTxOutputsQuery (Only txId)
+  inputs <- fmap (TransactionInputs . Map.fromList) . forM inRows
+    $ \(owner, posId) ->
+      (owner,) <$> getPositions conn posId
+  outputs <- fmap (TransactionOutputs . Map.fromList) . forM outRows
+    $ \(owner, posId) ->
+      (owner,) <$> getPositions conn posId
+  sigs <- lift . liftIO $ query conn getTxSignaturesQuery (Only txId)
+  pure (txId, SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
+
 
 
 newtype PositionId = PositionId { unPositionId :: ByteString }
@@ -447,6 +461,12 @@ getBlockTransactionsQuery :: Query
 getBlockTransactionsQuery =
   [sql|
     SELECT id, purpose, created FROM transaction WHERE block = ?
+  |]
+
+getTransactionQuery :: Query
+getTransactionQuery =
+  [sql|
+    SELECT id, purpose, created FROM transaction WHERE id = ?
   |]
 
 getTxInputsQuery :: Query
