@@ -28,6 +28,8 @@ import GHC.Generics (Generic)
 
 instance Serialise PublicKey
 
+instance Serialise Signature
+
 deriving instance FromField PublicKey
 
 newtype LoginPassword =

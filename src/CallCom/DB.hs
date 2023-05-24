@@ -8,7 +8,8 @@ module CallCom.DB
     getLedgerInception,
     getLedgerTip,
     getBlock,
-    getTransaction
+    getTransaction,
+    getUser
   ) where
 
 
@@ -19,7 +20,7 @@ import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions))
 import CallCom.Types.TokenIssue (TokenIssue (TokenIssue))
 import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction), TransactionId, TransactionPurpose)
-import CallCom.Types.User (User (User))
+import CallCom.Types.User (User (User), UserId)
 import Control.Monad (void, forM)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Trans.Class (lift)
@@ -324,7 +325,7 @@ getBlock conn bId = runMaybeT $ do
     listToMaybe <$> query conn getBlockQuery (Only bId)
   uRows <- lift . liftIO $ query conn getBlockNewUsersQuery (Only bId)
   let newUsers = Map.fromList
-        [ (uid, (User uid nm ref t pk, sig))
+        [ (uid, User uid nm ref sig t pk)
           | (uid, nm, ref, sig, t, pk) <- uRows
         ]
   ctRows <- lift . liftIO $ query conn getBlockNewCommodityTypesQuery (Only bId)
@@ -364,6 +365,13 @@ getTxRowTransaction conn (txId, purpose, t) = do
   sigs <- lift . liftIO $ query conn getTxSignaturesQuery (Only txId)
   pure (txId, SignedTransaction (Transaction txId purpose inputs outputs t) (Signatures (Map.fromList sigs)))
 
+
+getUser :: MonadIO m => Connection -> UserId -> m (Maybe User)
+getUser conn uid = runMaybeT $ do
+  (name, referrer, referrerSig, created, pubkey) <-
+    MaybeT . fmap listToMaybe . liftIO
+      $ query conn getUserQuery (Only uid)
+  pure (User uid name referrer referrerSig created pubkey)
 
 
 newtype PositionId = PositionId { unPositionId :: ByteString }
@@ -503,4 +511,11 @@ getCreditPositionsQuery :: Query
 getCreditPositionsQuery =
   [sql|
     SELECT issue, balance FROM credit_position WHERE position = ?
+  |]
+
+getUserQuery :: Query
+getUserQuery =
+  [sql|
+    SELECT name, referrer, referrer_signature, created_time, pubkey
+      FROM user WHERE id = ?
   |]

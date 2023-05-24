@@ -83,6 +83,7 @@ initialLedgerState t0 =
       User initUserId
         (UserName "morgan.thomas")
         Nothing
+        Nothing
         (t0 ^. #unLedgerInception)
         (UserPublicKey (PublicKey "r\GS#qT\205i\189\228$\233\129\158\131\227\220\170i~\228[\229N\155\128\191:2\a \208X"))
 
@@ -135,7 +136,7 @@ applyBlockToLedgerState s0 b = do
     LedgerState
       (s1 ^. #commodityTypes <> (fst <$> (b ^. #newCommodityTypes)))
       (s1 ^. #tokenIssues <> (fst <$> (b ^. #newTokenIssues)))
-      (s1 ^. #users <> (fst <$> (b ^. #newUsers)))
+      (s1 ^. #users <> (b ^. #newUsers))
       (s1 ^. #positions)
 
 
@@ -323,7 +324,7 @@ verifyUserIds ::
   Block ->
   Either ErrorMessage ()
 verifyUserIds b =
-  forM_ (Map.toList (b ^. #newUsers)) $ \(uid, (u, _)) ->
+  forM_ (Map.toList (b ^. #newUsers)) $ \(uid, u) ->
     bool
       (pure ())
       (Left (ErrorMessage ("user's id is not the expected hash: " <> pack (show (uid, u)))))
@@ -340,7 +341,7 @@ verifyResultingUsers s0 b s1 =
   bool
     (pure ())
     (Left (ErrorMessage ("incorrect resulting users: " <> pack (show (s0, b, s1)))))
-    ((s1 ^. #users) == (s0 ^. #users) `Map.union` (fst <$> (b ^. #newUsers)))
+    ((s1 ^. #users) == (s0 ^. #users) `Map.union` (b ^. #newUsers))
 
 
 -- Verify that each new user comes with the signature of the referrer
@@ -351,15 +352,14 @@ verifyReferrerSignatures ::
   Either ErrorMessage ()
 verifyReferrerSignatures st0 b =
   forM_ (Map.elems (b ^. #newUsers))
-    (uncurry (verifyReferrerSignature st0))
+    (verifyReferrerSignature st0)
 
 
 verifyReferrerSignature ::
   LedgerState ->
   User ->
-  Signature ->
   Either ErrorMessage ()
-verifyReferrerSignature s0 u sig = do
+verifyReferrerSignature s0 u = do
   referrerId <-
     maybe
       (Left (ErrorMessage ("no referrer: " <> pack (show u))))
@@ -370,6 +370,11 @@ verifyReferrerSignature s0 u sig = do
       (Left (ErrorMessage ("could not find referrer: " <> pack (show (u ^. #referrer)))))
       (pure . (^. #pubkey))
       (Map.lookup referrerId (s0 ^. #users))
+  sig <-
+    maybe
+      (Left (ErrorMessage ("no referrer signature (is this the initial user?): " <> pack (show u))))
+      pure
+      (u ^. #referrerSignature)
   bool
     (pure ())
     (Left (ErrorMessage ("referrer signature check failed: " <> pack (show (u, sig)))))

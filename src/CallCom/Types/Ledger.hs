@@ -64,7 +64,7 @@ data Block =
   Block
     { newCommodityTypes :: Map CommodityTypeId (CommodityType, Signature),
       newTokenIssues :: Map TokenIssueId (TokenIssue, Signatures),
-      newUsers :: Map UserId (User, Signature),
+      newUsers :: Map UserId User,
       created :: UTCTime,
       parent :: Maybe BlockId,
       transactions :: Map TransactionId SignedTransaction
