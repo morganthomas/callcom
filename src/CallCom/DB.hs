@@ -374,6 +374,9 @@ getUser conn uid = runMaybeT $ do
   pure (User uid name referrer referrerSig created pubkey)
 
 
+-- TODO: get ledger state APIs
+
+
 newtype PositionId = PositionId { unPositionId :: ByteString }
 
 instance FromField PositionId where
