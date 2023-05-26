@@ -55,11 +55,12 @@ instance ToJSON Signature where
 migrate :: MonadIO m => Connection -> m ()
 migrate conn = void . liftIO $ execute_ conn migrateQuery
 
+
 migrateQuery :: Query
 migrateQuery =
   [sql|
     CREATE TABLE IF NOT EXISTS ledger(
-      ledger_inception TIMESTAMPTZ KEY NOT NULL
+      ledger_inception TIMESTAMPTZ UNIQUE KEY NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS block(
@@ -283,7 +284,7 @@ migrateQuery =
 
     CREATE TABLE IF NOT EXISTS ledger_state_transition(
       initial_state BYTEA NOT NULL,
-      transaction BYTEA PRIMARY KEY,
+      block BYTEA PRIMARY KEY,
       resulting_state BYTEA NOT NULL,
       CONSTRAINT fk_initial_state
         FOREIGN KEY(initial_state)
@@ -380,35 +381,58 @@ getLedgerTipId conn =
   fmap fromOnly . listToMaybe <$> liftIO (query conn getLedgerTipIdQuery ())
 
 
-getUserPositions :: MonadIO m => Connection -> UserId -> m (Maybe Positions)
-getUserPositions conn uid = runMaybeT $ do
-  tipId <- getLedgerTipId conn
-  todo tipId uid
+getLedgerStateTransition :: MonadIO m => Connection -> BlockId -> m (Maybe (LedgerStateId, LedgerStateId))
+getLedgerStateTransition conn bId =
+  listToMaybe <$> liftIO (query conn getLedgerStateTransitionQuery (Only bId))
 
 
-todo :: a
-todo = error "todo"
+getUserPositions :: MonadIO m => Connection -> UserId -> Maybe BlockId -> m (Maybe Positions)
+getUserPositions conn uid mbId = runMaybeT $ do
+  bId <- maybe (MaybeT $ getLedgerTipId conn) pure mbId
+  (_, stateId) <- MaybeT $ getLedgerStateTransition conn bId
+  posId <- MaybeT $ getLedgerStateUserPositionsId conn stateId uid
+  lift $ getPositions conn posId
+
+
+getLedgerStateUserPositionsId :: MonadIO m => Connection -> LedgerStateId -> UserId -> m (Maybe PositionsId)
+getLedgerStateUserPositionsId conn bId uid =
+  fmap fromOnly . listToMaybe <$>
+    liftIO (query conn getLedgerStateUserPositionsIdQuery (bId, uid))
 
 
 -- TODO: get ledger state APIs
 
+newtype LedgerStateId = LedgerStateId { unLedgerStateId :: ByteString }
 
-newtype PositionId = PositionId { unPositionId :: ByteString }
-
-instance FromField PositionId where
+instance FromField LedgerStateId where
   fromField = fromJSONField
 
-instance FromJSON PositionId where
-  parseJSON = fmap PositionId . base64Parser
+instance FromJSON LedgerStateId where
+  parseJSON = fmap LedgerStateId . base64Parser
 
-instance ToField PositionId where
+instance ToField LedgerStateId where
   toField = toJSONField
 
-instance ToJSON PositionId where
-  toJSON = base64ToJSON . unPositionId
+instance ToJSON LedgerStateId where
+  toJSON = base64ToJSON . unLedgerStateId
 
 
-getPositions :: MonadIO m => Connection -> PositionId -> m Positions
+newtype PositionsId = PositionsId { unPositionsId :: ByteString }
+
+instance FromField PositionsId where
+  fromField = fromJSONField
+
+instance FromJSON PositionsId where
+  parseJSON = fmap PositionsId . base64Parser
+
+instance ToField PositionsId where
+  toField = toJSONField
+
+instance ToJSON PositionsId where
+  toJSON = base64ToJSON . unPositionsId
+
+
+getPositions :: MonadIO m => Connection -> PositionsId -> m Positions
 getPositions conn posId = do
   spotRows <- fmap fromOnly <$> liftIO (query conn getSpotPositionsQuery (Only posId))
   spotPosition <- Set.fromList . catMaybes <$> forM spotRows (getCommodity conn)
@@ -543,4 +567,16 @@ getLedgerTipIdQuery :: Query
 getLedgerTipIdQuery =
   [sql|
     SELECT tip_block FROM tip;
+  |]
+
+getLedgerStateTransitionQuery :: Query
+getLedgerStateTransitionQuery =
+  [sql|
+    SELECT initial_state, resulting_state FROM ledger_state_transition WHERE block = ?
+  |]
+
+getLedgerStateUserPositionsIdQuery :: Query
+getLedgerStateUserPositionsIdQuery =
+  [sql|
+    SELECT position FROM ledger_state_user WHERE ledger_state = ? AND user = ?
   |]
