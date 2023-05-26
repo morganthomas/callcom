@@ -9,7 +9,8 @@ module CallCom.DB
     getLedgerTip,
     getBlock,
     getTransaction,
-    getUser
+    getUser,
+    getUserPositions
   ) where
 
 
@@ -374,6 +375,21 @@ getUser conn uid = runMaybeT $ do
   pure (User uid name referrer referrerSig created pubkey)
 
 
+getLedgerTipId :: MonadIO m => Connection -> m (Maybe BlockId)
+getLedgerTipId conn =
+  fmap fromOnly . listToMaybe <$> liftIO (query conn getLedgerTipIdQuery ())
+
+
+getUserPositions :: MonadIO m => Connection -> UserId -> m (Maybe Positions)
+getUserPositions conn uid = runMaybeT $ do
+  tipId <- getLedgerTipId conn
+  todo tipId uid
+
+
+todo :: a
+todo = error "todo"
+
+
 -- TODO: get ledger state APIs
 
 
@@ -521,4 +537,10 @@ getUserQuery =
   [sql|
     SELECT name, referrer, referrer_signature, created_time, pubkey
       FROM user WHERE id = ?
+  |]
+
+getLedgerTipIdQuery :: Query
+getLedgerTipIdQuery =
+  [sql|
+    SELECT tip_block FROM tip;
   |]
