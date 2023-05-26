@@ -15,6 +15,7 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Database.PostgreSQL.Simple.FromField (FromField)
+import Database.PostgreSQL.Simple.ToField (ToField)
 import GHC.Generics (Generic)
 
 
@@ -32,7 +33,7 @@ instance Serialise CommodityType
 newtype CommodityTypeId =
   CommodityTypeId
     { unCommodityTypeId :: ByteString }
-  deriving (Eq, Ord, Generic, Show, Serialise, FromField)
+  deriving (Eq, Ord, Generic, Show, Serialise, FromField, ToField)
 
 
 newtype CommodityTypeName =

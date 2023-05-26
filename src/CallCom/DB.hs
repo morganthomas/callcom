@@ -10,16 +10,18 @@ module CallCom.DB
     getBlock,
     getTransaction,
     getUser,
-    getUserPositions
+    getUserPositions,
+    getCommodityType,
+    getTokenIssue
   ) where
 
 
 import CallCom.JSON (base64Parser, base64ToJSON)
 import CallCom.Types.Commodity (Commodity (Commodity), CommodityId, CommodityDescription (CommodityDescription))
-import CallCom.Types.CommodityType (CommodityType (CommodityType))
+import CallCom.Types.CommodityType (CommodityType (CommodityType), CommodityTypeId)
 import CallCom.Types.Ledger (BlockId, Block (Block), LedgerInception)
 import CallCom.Types.Positions (Positions (Positions))
-import CallCom.Types.TokenIssue (TokenIssue (TokenIssue))
+import CallCom.Types.TokenIssue (TokenIssue (TokenIssue), TokenIssueId)
 import CallCom.Types.Transaction (Signatures (Signatures), TransactionInputs (TransactionInputs), TransactionOutputs (TransactionOutputs), SignedTransaction (SignedTransaction), Transaction (Transaction), TransactionId, TransactionPurpose)
 import CallCom.Types.User (User (User), UserId)
 import Control.Monad (void, forM)
@@ -400,6 +402,27 @@ getLedgerStateUserPositionsId conn bId uid =
     liftIO (query conn getLedgerStateUserPositionsIdQuery (bId, uid))
 
 
+getCommodityType :: MonadIO m => Connection -> CommodityTypeId -> m (Maybe CommodityType)
+getCommodityType conn ctId = runMaybeT $ do
+  (name, created, author) <- MaybeT $ listToMaybe <$>
+    liftIO (query conn getCommodityTypeQuery (Only ctId))
+  pure (CommodityType name created author)
+
+
+getTokenIssue :: MonadIO m => Connection -> TokenIssueId -> m (Maybe TokenIssue)
+getTokenIssue conn tiId = runMaybeT $ do
+  (underlying, fraction, created) <- MaybeT $ listToMaybe <$>
+    liftIO (query conn getTokenIssueQuery (Only tiId))
+  issuers <- lift . liftIO $ Set.fromList . fmap (fst :: (UserId, Signature) -> UserId) <$>
+    query conn getTokenIssuersQuery (Only tiId)
+  circulation <- todo
+  pure (TokenIssue underlying fraction created issuers circulation)
+
+
+todo :: a
+todo = error "todo"
+
+
 -- TODO: get ledger state APIs
 
 newtype LedgerStateId = LedgerStateId { unLedgerStateId :: ByteString }
@@ -579,4 +602,16 @@ getLedgerStateUserPositionsIdQuery :: Query
 getLedgerStateUserPositionsIdQuery =
   [sql|
     SELECT position FROM ledger_state_user WHERE ledger_state = ? AND user = ?
+  |]
+
+getCommodityTypeQuery :: Query
+getCommodityTypeQuery =
+  [sql|
+    SELECT name, created_time, author FROM commodity_type WHERE id = ?
+  |]
+
+getTokenIssueQuery :: Query
+getTokenIssueQuery =
+  [sql|
+    SELECT underlying, fraction, created_time FROM token_issue WHERE id = ?
   |]
